@@ -1,5 +1,5 @@
 // ============================================
-// DASHBOARD - User History
+// DASHBOARD - User History Only
 // ============================================
 
 async function renderDashboard(container) {
@@ -143,14 +143,26 @@ async function deleteMyEbook(id) {
 }
 
 // ============================================
-// ADMIN PANEL
+// ADMIN PANEL — শুধু সিক্রেট URL দিয়ে
 // ============================================
 
 let adminAuthenticated = false;
-let adminSettings = null;
 
 async function renderAdmin(container) {
-  if (!adminAuthenticated) { showAdminLogin(container); return; }
+  // Check secret key from URL hash
+  const hash = window.location.hash;
+  const isSecretURL = hash.includes('admin-') && hash.length > 10;
+
+  if (!isSecretURL && !adminAuthenticated) {
+    // Not from secret URL — show 404
+    container.innerHTML = `<div class="page"><div class="empty-state" style="padding-top:60px;"><div class="empty-icon">🔒</div><p>এই পেজটি পাওয়া যায়নি</p></div></div>`;
+    return;
+  }
+
+  if (!adminAuthenticated) {
+    showAdminLogin(container);
+    return;
+  }
   showAdminPanel(container);
 }
 
@@ -162,7 +174,7 @@ function showAdminLogin(container) {
           🔐 অ্যাডমিন লগইন
         </div>
         <div class="input-group">
-          <label>অ্যাডমিন পাসওয়ার্ড</label>
+          <label>পাসওয়ার্ড</label>
           <input type="password" id="adminPassInput" placeholder="পাসওয়ার্ড দিন" onkeydown="if(event.key==='Enter')checkAdminPass()">
         </div>
         <button class="btn-primary" onclick="checkAdminPass()">প্রবেশ করুন</button>
@@ -171,11 +183,11 @@ function showAdminLogin(container) {
 }
 
 async function checkAdminPass() {
-  const pass = document.getElementById('adminPassInput').value;
+  const pass = document.getElementById('adminPassInput')?.value;
+  if (!pass) return;
   const settings = await getSettings();
   if (pass === (settings.adminPass || 'admin123')) {
     adminAuthenticated = true;
-    adminSettings = settings;
     showAdminPanel(document.getElementById('mainContent'));
   } else {
     showToast('❌ ভুল পাসওয়ার্ড');
@@ -183,34 +195,28 @@ async function checkAdminPass() {
 }
 
 async function showAdminPanel(container) {
-  adminSettings = await getSettings();
+  const settings = await getSettings();
   container.innerHTML = `
     <div class="page">
       <div style="background:var(--primary-dark);color:#fff;border-radius:var(--radius);margin-bottom:16px;padding:16px;text-align:center;font-family:var(--font-serif);font-size:18px;font-weight:700;">
         ⚙️ অ্যাডমিন প্যানেল
       </div>
-
       <div class="card" style="margin-bottom:16px;">
-        <div style="font-size:14px;font-weight:700;color:var(--primary-dark);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">⚙️ সেটিংস</div>
+        <div style="font-size:14px;font-weight:700;color:var(--primary-dark);margin-bottom:12px;">⚙️ সেটিংস</div>
         <div class="input-group">
           <label>WhatsApp নম্বর (অর্ডার আসবে এখানে)</label>
-          <input type="tel" id="setWA" value="${adminSettings.whatsapp||''}" placeholder="01XXXXXXXXX">
+          <input type="tel" id="setWA" value="${settings.whatsapp||''}" placeholder="01XXXXXXXXX">
         </div>
         <div class="input-group">
           <label>Facebook পেইজ Username</label>
-          <input type="text" id="setFB" value="${adminSettings.fbPage||''}" placeholder="yourpage">
+          <input type="text" id="setFB" value="${settings.fbPage||''}" placeholder="yourpage">
         </div>
         <div class="input-group">
-          <label>অ্যাডমিন পাসওয়ার্ড পরিবর্তন</label>
-          <input type="password" id="setPass" placeholder="নতুন পাসওয়ার্ড (খালি রাখলে পরিবর্তন হবে না)">
+          <label>নতুন পাসওয়ার্ড (খালি রাখলে পরিবর্তন হবে না)</label>
+          <input type="password" id="setPass" placeholder="নতুন পাসওয়ার্ড">
         </div>
-        <div class="input-group">
-          <label>অ্যাডমিন ফোন নম্বর</label>
-          <input type="tel" id="setAdminPhone" value="${adminSettings.adminPhone||''}" placeholder="01XXXXXXXXX">
-        </div>
-        <button class="btn-primary" onclick="saveSettings()">সেটিংস সেভ করুন</button>
+        <button class="btn-primary" onclick="saveSettings()">✅ সেটিংস সেভ করুন</button>
       </div>
-
       <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;">
         <button class="btn-primary btn-sm" onclick="loadAdminTab('orders')" id="atab-orders">📦 অর্ডার</button>
         <button class="btn-secondary btn-sm" onclick="loadAdminTab('borrows')" id="atab-borrows">📚 ধার</button>
@@ -224,11 +230,11 @@ async function showAdminPanel(container) {
 }
 
 function loadAdminTab(tab) {
-  ['orders','borrows','users','ebooks','booklist'].forEach(t=>{
-    const b=document.getElementById('atab-'+t);
-    if(b) b.className=t===tab?'btn-primary btn-sm':'btn-secondary btn-sm';
+  ['orders','borrows','users','ebooks','booklist'].forEach(t => {
+    const b = document.getElementById('atab-'+t);
+    if (b) b.className = t===tab ? 'btn-primary btn-sm' : 'btn-secondary btn-sm';
   });
-  switch(tab){
+  switch(tab) {
     case 'orders':   loadAdminOrders(); break;
     case 'borrows':  loadAdminBorrows(); break;
     case 'users':    loadAdminUsers(); break;
@@ -238,32 +244,29 @@ function loadAdminTab(tab) {
 }
 
 async function saveSettings() {
-  const wa=document.getElementById('setWA').value.trim();
-  const fb=document.getElementById('setFB').value.trim();
-  const pass=document.getElementById('setPass').value.trim();
-  const adminPhone=document.getElementById('setAdminPhone').value.trim();
-  const update={whatsapp:wa,fbPage:fb,adminPhone};
-  if(pass) update.adminPass=pass;
+  const wa = document.getElementById('setWA').value.trim();
+  const fb = document.getElementById('setFB').value.trim();
+  const pass = document.getElementById('setPass').value.trim();
+  const update = { whatsapp: wa, fbPage: fb };
+  if (pass) update.adminPass = pass;
   try {
-    await db.collection(SETTINGS_COL).doc('config').set(update,{merge:true});
-    adminSettings={...adminSettings,...update};
-    // Set admin role
-    if(adminPhone) await db.collection(USERS_COL).doc(adminPhone).update({role:'admin'}).catch(()=>{});
+    await db.collection(SETTINGS_COL).doc('config').set(update, {merge:true});
     showToast('✅ সেটিংস সেভ হয়েছে!');
-  } catch(e){ showToast('সমস্যা হয়েছে'); }
+    if (pass) document.getElementById('setPass').value = '';
+  } catch(e) { showToast('সমস্যা হয়েছে'); }
 }
 
 async function loadAdminOrders() {
-  const el=document.getElementById('adminContent');
-  if(!el) return;
-  el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
+  const el = document.getElementById('adminContent');
+  if (!el) return;
+  el.innerHTML = '<div class="text-muted text-sm">লোড হচ্ছে...</div>';
   try {
-    const snap=await db.collection(ORDERS_COL).orderBy('createdAt','desc').limit(50).get();
-    if(snap.empty){el.innerHTML=`<div class="empty-state"><p>কোনো অর্ডার নেই</p></div>`;return;}
-    el.innerHTML=snap.docs.map(d=>{
-      const o=d.data();
-      const badge=o.status==='confirmed'?'badge-green':o.status==='cancelled'?'badge-red':'badge-yellow';
-      const label=o.status==='confirmed'?'নিশ্চিত':o.status==='cancelled'?'বাতিল':'অপেক্ষামান';
+    const snap = await db.collection(ORDERS_COL).orderBy('createdAt','desc').limit(50).get();
+    if (snap.empty) { el.innerHTML=`<div class="empty-state"><p>কোনো অর্ডার নেই</p></div>`; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const o = d.data();
+      const badge = o.status==='confirmed'?'badge-green':o.status==='cancelled'?'badge-red':'badge-yellow';
+      const label = o.status==='confirmed'?'নিশ্চিত':o.status==='cancelled'?'বাতিল':'অপেক্ষামান';
       return `<div class="history-item type-order">
         <div class="flex-between"><div class="history-title">${o.type==='print'?'🖨️':'📗'} ${o.bookTitle}</div><span class="badge ${badge}">${label}</span></div>
         <div class="history-date">👤 ${o.userName} · 📞 ${o.userPhone}</div>
@@ -272,29 +275,29 @@ async function loadAdminOrders() {
         ${o.status==='pending'?`<div style="display:flex;gap:6px;margin-top:8px;">
           <button class="btn-primary btn-sm" onclick="updateOrderStatus('${d.id}','confirmed')">✅ নিশ্চিত</button>
           <button class="btn-danger btn-sm" onclick="updateOrderStatus('${d.id}','cancelled')">❌ বাতিল</button>
-          <a href="${buildWhatsAppLink(o.userPhone,`আপনার "${o.bookTitle}" বইয়ের অর্ডার নিশ্চিত হয়েছে। ধন্যবাদ!`)}" target="_blank" class="btn-secondary btn-sm" style="text-decoration:none;display:inline-block;">📱 নোটিফাই</a>
+          <a href="${buildWhatsAppLink(o.userPhone,`আপনার "${o.bookTitle}" অর্ডার নিশ্চিত হয়েছে! ধন্যবাদ।`)}" target="_blank" class="btn-secondary btn-sm" style="text-decoration:none;display:inline-block;">📱 নোটিফাই</a>
         </div>`:''}
       </div>`;
     }).join('');
-  } catch(e){el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`;}
+  } catch(e) { el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`; }
 }
 
-async function updateOrderStatus(orderId,status) {
-  try{ await db.collection(ORDERS_COL).doc(orderId).update({status}); showToast('✅ আপডেট হয়েছে'); loadAdminOrders(); }
-  catch(e){ showToast('সমস্যা হয়েছে'); }
+async function updateOrderStatus(id, status) {
+  try { await db.collection(ORDERS_COL).doc(id).update({status}); showToast('✅ আপডেট হয়েছে'); loadAdminOrders(); }
+  catch(e) { showToast('সমস্যা হয়েছে'); }
 }
 
 async function loadAdminBorrows() {
-  const el=document.getElementById('adminContent');
-  if(!el) return;
-  el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
+  const el = document.getElementById('adminContent');
+  if (!el) return;
+  el.innerHTML = '<div class="text-muted text-sm">লোড হচ্ছে...</div>';
   try {
-    const snap=await db.collection(BORROW_COL).orderBy('createdAt','desc').limit(50).get();
-    if(snap.empty){el.innerHTML=`<div class="empty-state"><p>কোনো রেকর্ড নেই</p></div>`;return;}
-    el.innerHTML=snap.docs.map(d=>{
-      const b=d.data();
-      const badge=b.status==='returned'?'badge-green':b.status==='approved'?'badge-blue':b.status==='rejected'?'badge-red':'badge-yellow';
-      const label=b.status==='returned'?'ফেরত':b.status==='approved'?'ধার দেওয়া':b.status==='rejected'?'না':'অনুরোধ';
+    const snap = await db.collection(BORROW_COL).orderBy('createdAt','desc').limit(50).get();
+    if (snap.empty) { el.innerHTML=`<div class="empty-state"><p>কোনো রেকর্ড নেই</p></div>`; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const b = d.data();
+      const badge = b.status==='returned'?'badge-green':b.status==='approved'?'badge-blue':b.status==='rejected'?'badge-red':'badge-yellow';
+      const label = b.status==='returned'?'ফেরত':b.status==='approved'?'ধার দেওয়া':b.status==='rejected'?'না':'অনুরোধ';
       return `<div class="history-item type-borrow">
         <div class="flex-between"><div class="history-title">📕 ${b.bookTitle}</div><span class="badge ${badge}">${label}</span></div>
         <div class="history-date">🔵 ${b.borrowerName} (${b.borrowerPhone})</div>
@@ -302,66 +305,68 @@ async function loadAdminBorrows() {
         <div class="history-date">📅 ${b.fromDate} → ${b.toDate}</div>
       </div>`;
     }).join('');
-  } catch(e){el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`;}
+  } catch(e) { el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`; }
 }
 
 async function loadAdminUsers() {
-  const el=document.getElementById('adminContent');
-  if(!el) return;
-  el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
+  const el = document.getElementById('adminContent');
+  if (!el) return;
+  el.innerHTML = '<div class="text-muted text-sm">লোড হচ্ছে...</div>';
   try {
-    const snap=await db.collection(USERS_COL).orderBy('createdAt','desc').get();
-    if(snap.empty){el.innerHTML=`<div class="empty-state"><p>কোনো ইউজার নেই</p></div>`;return;}
-    el.innerHTML=`<div class="text-sm text-muted" style="margin-bottom:10px;">মোট: ${snap.size} জন</div>`+
-    snap.docs.map(d=>{
-      const u=d.data();
+    const snap = await db.collection(USERS_COL).orderBy('createdAt','desc').get();
+    if (snap.empty) { el.innerHTML=`<div class="empty-state"><p>কোনো ইউজার নেই</p></div>`; return; }
+    el.innerHTML = `<div class="text-sm text-muted" style="margin-bottom:10px;">মোট: ${snap.size} জন</div>` +
+    snap.docs.map(d => {
+      const u = d.data();
       return `<div class="history-item">
-        <div class="flex-between"><div class="history-title">👤 ${u.name}</div>${u.role==='admin'?`<span class="badge badge-blue">অ্যাডমিন</span>`:''}</div>
+        <div class="history-title">👤 ${u.name}</div>
         <div class="history-date">📞 ${u.phone}</div>
         <div class="history-date">📍 ${u.village||''}, ${u.upazila||''}, ${u.district||''}</div>
         <div class="history-date">📅 যোগ: ${formatDate(u.createdAt)}</div>
       </div>`;
     }).join('');
-  } catch(e){el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`;}
+  } catch(e) { el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`; }
 }
 
 async function loadAdminEbooks() {
-  const el=document.getElementById('adminContent');
-  if(!el) return;
-  el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
+  const el = document.getElementById('adminContent');
+  if (!el) return;
+  el.innerHTML = '<div class="text-muted text-sm">লোড হচ্ছে...</div>';
   try {
-    const snap=await db.collection(EBOOKS_COL).orderBy('createdAt','desc').get();
-    if(snap.empty){el.innerHTML=`<div class="empty-state"><p>কোনো ই-বুক নেই</p></div>`;return;}
-    el.innerHTML=snap.docs.map(d=>{
-      const b=d.data();
+    const snap = await db.collection(EBOOKS_COL).orderBy('createdAt','desc').get();
+    if (snap.empty) { el.innerHTML=`<div class="empty-state"><p>কোনো ই-বুক নেই</p></div>`; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const b = d.data();
       return `<div class="history-item">
-        <div class="flex-between"><div class="history-title">📖 ${b.title}</div><button class="btn-danger btn-sm" onclick="adminDeleteDoc('${EBOOKS_COL}','${d.id}','ebooks')">🗑️</button></div>
+        <div class="flex-between"><div class="history-title">📖 ${b.title}</div>
+        <button class="btn-danger btn-sm" onclick="adminDelete('${EBOOKS_COL}','${d.id}','ebooks')">🗑️</button></div>
         <div class="history-date">✍️ ${b.author||'অজানা'} · 👤 ${b.uploaderName}</div>
         <div class="history-date">📅 ${formatDate(b.createdAt)}</div>
       </div>`;
     }).join('');
-  } catch(e){el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`;}
+  } catch(e) { el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`; }
 }
 
 async function loadAdminBooklist() {
-  const el=document.getElementById('adminContent');
-  if(!el) return;
-  el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
+  const el = document.getElementById('adminContent');
+  if (!el) return;
+  el.innerHTML = '<div class="text-muted text-sm">লোড হচ্ছে...</div>';
   try {
-    const snap=await db.collection(BOOKLIST_COL).orderBy('createdAt','desc').get();
-    if(snap.empty){el.innerHTML=`<div class="empty-state"><p>কোনো বই নেই</p></div>`;return;}
-    el.innerHTML=snap.docs.map(d=>{
-      const b=d.data();
+    const snap = await db.collection(BOOKLIST_COL).orderBy('createdAt','desc').get();
+    if (snap.empty) { el.innerHTML=`<div class="empty-state"><p>কোনো বই নেই</p></div>`; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const b = d.data();
       return `<div class="history-item">
-        <div class="flex-between"><div class="history-title">📗 ${b.title}</div><button class="btn-danger btn-sm" onclick="adminDeleteDoc('${BOOKLIST_COL}','${d.id}','booklist')">🗑️</button></div>
+        <div class="flex-between"><div class="history-title">📗 ${b.title}</div>
+        <button class="btn-danger btn-sm" onclick="adminDelete('${BOOKLIST_COL}','${d.id}','booklist')">🗑️</button></div>
         <div class="history-date">${b.author?`✍️ ${b.author}`:''}${b.price?` · ৳${b.price}`:''}</div>
       </div>`;
     }).join('');
-  } catch(e){el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`;}
+  } catch(e) { el.innerHTML=`<div class="empty-state"><p>লোড করতে সমস্যা</p></div>`; }
 }
 
-async function adminDeleteDoc(col,id,tab) {
-  if(!confirm('মুছে ফেলবেন?')) return;
-  try{ await db.collection(col).doc(id).delete(); showToast('মুছে ফেলা হয়েছে'); loadAdminTab(tab); }
-  catch(e){ showToast('সমস্যা হয়েছে'); }
+async function adminDelete(col, id, tab) {
+  if (!confirm('মুছে ফেলবেন?')) return;
+  try { await db.collection(col).doc(id).delete(); showToast('মুছে ফেলা হয়েছে'); loadAdminTab(tab); }
+  catch(e) { showToast('সমস্যা হয়েছে'); }
 }
