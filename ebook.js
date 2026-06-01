@@ -1,8 +1,6 @@
 // ============================================
-// E-BOOK FEATURE (Feature 2)
+// E-BOOK FEATURE
 // ============================================
-
-let ebookSearchTerm = '';
 
 async function renderEbook(container) {
   container.innerHTML = `
@@ -11,12 +9,10 @@ async function renderEbook(container) {
         <span class="section-title">📖 ই-বুক লাইব্রেরি</span>
         <button class="btn-accent btn-sm" onclick="showUploadEbook()">+ আপলোড</button>
       </div>
-
       <div class="search-bar">
         <span>🔍</span>
-        <input type="text" id="ebookSearch" placeholder="বইয়ের নাম বা লেখক খুঁজুন..." oninput="filterEbooks(this.value)">
+        <input type="text" id="ebookSearch" placeholder="বইয়ের নাম বা লেখক..." oninput="filterEbooks(this.value)">
       </div>
-
       <div id="ebookList"><div class="text-muted text-sm text-center" style="padding:20px;">লোড হচ্ছে...</div></div>
     </div>
   `;
@@ -27,10 +23,8 @@ async function loadEbooks(search = '') {
   const el = document.getElementById('ebookList');
   if (!el) return;
   try {
-    let query = db.collection(EBOOKS_COL).orderBy('createdAt', 'desc');
-    const snap = await query.get();
+    const snap = await db.collection(EBOOKS_COL).orderBy('createdAt','desc').get();
     let books = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
     if (search) {
       const s = search.toLowerCase();
       books = books.filter(b =>
@@ -39,24 +33,22 @@ async function loadEbooks(search = '') {
         b.subject?.toLowerCase().includes(s)
       );
     }
-
     if (books.length === 0) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>${search ? 'কোনো ফলাফল পাওয়া যায়নি' : 'এখনো কোনো বই আপলোড হয়নি'}</p></div>`;
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>${search?'কোনো ফলাফল নেই':'এখনো কোনো বই নেই'}</p></div>`;
       return;
     }
-
     el.innerHTML = books.map(b => `
       <div class="book-card">
         <div class="book-card-title">📕 ${b.title}</div>
         <div class="book-card-meta">
-          ${b.author ? `<span>✍️ ${b.author}</span>` : ''}
-          ${b.subject ? `<span>📌 ${b.subject}</span>` : ''}
-          <span>👤 ${b.uploaderName || 'অজানা'}</span>
+          ${b.author?`<span>✍️ ${b.author}</span>`:''}
+          ${b.subject?`<span>📌 ${b.subject}</span>`:''}
+          <span>👤 ${b.uploaderName||'অজানা'}</span>
           <span>🕐 ${timeAgo(b.createdAt)}</span>
         </div>
-        ${b.description ? `<div class="text-sm text-muted">${b.description}</div>` : ''}
+        ${b.description?`<div class="text-sm text-muted">${b.description}</div>`:''}
         <div class="book-card-actions">
-          <a href="${b.driveLink}" target="_blank" class="btn-primary btn-sm" style="text-decoration:none;display:inline-block;">📥 ডাউনলোড / পড়ুন</a>
+          <a href="${b.link}" target="_blank" rel="noopener" class="btn-primary btn-sm" style="text-decoration:none;display:inline-block;">📥 পড়ুন / ডাউনলোড</a>
           <button class="btn-secondary btn-sm" onclick="showPrintOrder('${b.id}','${escHtml(b.title)}')">🖨️ প্রিন্ট অর্ডার</button>
         </div>
       </div>
@@ -66,17 +58,14 @@ async function loadEbooks(search = '') {
   }
 }
 
-function filterEbooks(val) {
-  ebookSearchTerm = val;
-  loadEbooks(val);
-}
+function filterEbooks(val) { loadEbooks(val); }
 
 function showUploadEbook() {
   showModal(`
     <span class="modal-close" onclick="closeModal()">✕</span>
     <div class="modal-title">📤 ই-বুক আপলোড</div>
     <div style="background:#f0f9f4;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--primary-dark);">
-      💡 প্রথমে Google Drive-এ PDF আপলোড করুন → Share → "Anyone with the link" → লিংক কপি করুন
+      💡 যেকোনো ওয়েবসাইটের লিংক দিতে পারবেন — Google Drive, Scribd, Archive.org, যেকোনো সাইট।
     </div>
     <div class="input-group">
       <label>বইয়ের নাম *</label>
@@ -91,12 +80,12 @@ function showUploadEbook() {
       <input type="text" id="ebSubject" placeholder="যেমন: উপন্যাস, ইতিহাস, ধর্ম...">
     </div>
     <div class="input-group">
-      <label>Google Drive লিংক *</label>
-      <input type="url" id="ebLink" placeholder="https://drive.google.com/...">
+      <label>বইয়ের লিংক *</label>
+      <input type="url" id="ebLink" placeholder="https://...">
     </div>
     <div class="input-group">
-      <label>সংক্ষিপ্ত বিবরণ</label>
-      <textarea id="ebDesc" placeholder="বই সম্পর্কে সংক্ষেপে লিখুন (ঐচ্ছিক)"></textarea>
+      <label>সংক্ষিপ্ত বিবরণ (ঐচ্ছিক)</label>
+      <textarea id="ebDesc" placeholder="বই সম্পর্কে লিখুন..."></textarea>
     </div>
     <button class="btn-primary" onclick="submitEbook()">আপলোড করুন</button>
   `);
@@ -106,14 +95,13 @@ async function submitEbook() {
   const title = document.getElementById('ebTitle').value.trim();
   const link = document.getElementById('ebLink').value.trim();
   if (!title) return showToast('বইয়ের নাম দিন');
-  if (!link || !link.includes('drive.google.com')) return showToast('সঠিক Google Drive লিংক দিন');
-
+  if (!link || !link.startsWith('http')) return showToast('সঠিক লিংক দিন (http দিয়ে শুরু)');
   try {
     await db.collection(EBOOKS_COL).add({
       title,
       author: document.getElementById('ebAuthor').value.trim(),
       subject: document.getElementById('ebSubject').value.trim(),
-      driveLink: link,
+      link,
       description: document.getElementById('ebDesc').value.trim(),
       uploaderPhone: currentUser.phone,
       uploaderName: currentUser.name,
@@ -122,9 +110,7 @@ async function submitEbook() {
     closeModal();
     showToast('✅ বই আপলোড হয়েছে!');
     navigate('ebook');
-  } catch(e) {
-    showToast('সমস্যা হয়েছে, আবার চেষ্টা করুন');
-  }
+  } catch(e) { showToast('সমস্যা হয়েছে'); }
 }
 
 async function showPrintOrder(bookId, bookTitle) {
@@ -150,15 +136,13 @@ async function showPrintOrder(bookId, bookTitle) {
     </div>
     <div class="input-group">
       <label>বিশেষ নির্দেশনা (ঐচ্ছিক)</label>
-      <textarea id="printNote" placeholder="রঙিন/সাদাকালো, কাগজের সাইজ ইত্যাদি..."></textarea>
+      <textarea id="printNote" placeholder="রঙিন/সাদাকালো, কাগজের সাইজ..."></textarea>
     </div>
-    <div style="margin-bottom:14px;">
-      <div class="text-sm text-muted mb-8">অর্ডার পাঠাবেন:</div>
-      <div style="display:flex;gap:8px;">
-        ${settings.whatsapp ? `<a href="${buildWhatsAppLink(settings.whatsapp, '')}" id="waLink" class="btn-primary btn-sm" style="flex:1;text-decoration:none;text-align:center;display:block;" onclick="sendPrintOrderWA('${bookId}','${escHtml(bookTitle)}','${settings.whatsapp}');return false;">📱 WhatsApp</a>` : ''}
-        ${settings.fbPage ? `<a href="${buildFbLink(settings.fbPage)}" target="_blank" class="btn-secondary btn-sm" style="flex:1;text-decoration:none;text-align:center;display:block;">📘 Facebook</a>` : ''}
-      </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      ${settings.whatsapp?`<button class="btn-primary btn-sm" style="flex:1;" onclick="sendPrintOrderWA('${bookId}','${escHtml(bookTitle)}','${settings.whatsapp}')">📱 WhatsApp অর্ডার</button>`:''}
+      ${settings.fbPage?`<a href="https://m.me/${settings.fbPage}" target="_blank" class="btn-secondary btn-sm" style="flex:1;text-decoration:none;text-align:center;display:block;">📘 Facebook</a>`:''}
     </div>
+    ${!settings.whatsapp&&!settings.fbPage?`<div class="text-muted text-sm text-center" style="margin-top:8px;">অ্যাডমিন এখনো যোগাযোগের তথ্য সেট করেননি</div>`:''}
   `);
 }
 
@@ -166,27 +150,14 @@ async function sendPrintOrderWA(bookId, bookTitle, waNum) {
   const qty = document.getElementById('printQty').value;
   const type = document.getElementById('printType').value;
   const note = document.getElementById('printNote').value;
-
-  const msg = `🖨️ প্রিন্ট অর্ডার\n\nবই: ${bookTitle}\nকপি: ${qty}\nধরন: ${type}\nনোট: ${note || 'নেই'}\n\nঅর্ডারকারী: ${currentUser.name}\nমোবাইল: ${currentUser.phone}`;
-
-  // Save order to Firestore
+  const msg = `🖨️ প্রিন্ট অর্ডার\n\nবই: ${bookTitle}\nকপি: ${qty}\nধরন: ${type}\nনোট: ${note||'নেই'}\n\nঅর্ডারকারী: ${currentUser.name}\nমোবাইল: ${currentUser.phone}`;
   await db.collection(ORDERS_COL).add({
-    type: 'print',
-    bookId, bookTitle,
-    qty: Number(qty),
-    bindingType: type,
-    note,
-    userPhone: currentUser.phone,
-    userName: currentUser.name,
-    status: 'pending',
-    createdAt: new Date().toISOString()
+    type: 'print', bookId, bookTitle,
+    qty: Number(qty), bindingType: type, note,
+    userPhone: currentUser.phone, userName: currentUser.name,
+    status: 'pending', createdAt: new Date().toISOString()
   });
-
   window.open(buildWhatsAppLink(waNum, msg), '_blank');
   closeModal();
   showToast('✅ অর্ডার পাঠানো হয়েছে!');
-}
-
-function escHtml(str) {
-  return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
