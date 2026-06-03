@@ -258,21 +258,41 @@ async function loadAdminBorrows() {
   }catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`;}
 }
 
-async function loadAdminUsers() {
+async function loadAdminUsers(search='') {
   const el=document.getElementById('adminContent'); if(!el) return;
   el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
   try {
     const snap=await db.collection(USERS_COL).orderBy('createdAt','desc').get();
+    let users = snap.docs.map(d=>({id:d.id,...d.data()}));
     if(snap.empty){el.innerHTML=`<div class="empty-state"><p>কোনো ইউজার নেই</p></div>`;return;}
-    el.innerHTML=`<div class="text-sm text-muted" style="margin-bottom:10px;">মোট: ${snap.size} জন</div>`+
-    snap.docs.map(d=>{const u=d.data();
-      return `<div class="history-item">
+    el.innerHTML=`
+      <div class="search-bar" style="margin-bottom:10px;">
+        <span>🔍</span>
+        <input type="text" id="userSearch" placeholder="নাম, নম্বর, গ্রাম, উপজেলা, জেলা..." 
+          value="${search}" oninput="loadAdminUsers(this.value)">
+      </div>
+      <div id="userListArea"></div>`;
+    
+    const s = search.toLowerCase();
+    if(s) {
+      users = users.filter(u=>
+        u.name?.toLowerCase().includes(s)||
+        u.phone?.includes(s)||
+        u.village?.toLowerCase().includes(s)||
+        u.upazila?.toLowerCase().includes(s)||
+        u.district?.toLowerCase().includes(s)
+      );
+    }
+    
+    const listEl = document.getElementById('userListArea');
+    if(!listEl) return;
+    listEl.innerHTML = `<div class="text-sm text-muted" style="margin-bottom:10px;">মোট: ${users.length} জন</div>`+
+    users.map(u=>`<div class="history-item">
         <div class="history-title">👤 ${u.name}</div>
         <div class="history-date">📞 ${u.phone}</div>
         <div class="history-date">📍 ${u.village||''}, ${u.upazila||''}, ${u.district||''}</div>
         <div class="history-date">📅 ${formatDate(u.createdAt)}</div>
-      </div>`;
-    }).join('');
+      </div>`).join('');
   }catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`;}
 }
 

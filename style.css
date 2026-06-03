@@ -435,3 +435,25 @@ html, body {
   0%,100% { opacity: 1; transform: scale(1); }
   50%     { opacity: 0.65; transform: scale(1.05); }
 }
+
+/* ---- CATEGORY CHIPS ---- */
+.cat-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .2s;
+}
+.cat-chip:active { transform: scale(0.96); }
+.cat-chip-active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  font-weight: 600;
+}
