@@ -402,58 +402,13 @@ html, body {
   margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;
 }
 
-/* ---- PRINT ORDER BUTTON - পালসিং লাল ---- */
-.print-order-btn {
-  background: #e74c3c;
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 8px 14px;
-  font-family: var(--font-main);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  animation: pulseBright 1.8s ease-in-out infinite;
-  letter-spacing: 0.3px;
+/* ---- BOOKSHOP ---- */
+.shop-badge-fixed {
+  background:#dbeafe;color:#1e40af;
+  padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;
 }
-@keyframes pulseBright {
-  0%   { opacity: 1; box-shadow: 0 0 0 0 rgba(231,76,60,0.5); }
-  50%  { opacity: 0.72; box-shadow: 0 0 0 6px rgba(231,76,60,0); }
-  100% { opacity: 1; box-shadow: 0 0 0 0 rgba(231,76,60,0); }
-}
-
-/* ---- হার্ড কপি ব্যক্তিগত লাইব্রেরি বাটন ---- */
-.feature-card .borrow-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #e67e22;
-  margin-top: 3px;
-  animation: borrowPulse 2s ease-in-out infinite;
-  display: block;
-}
-@keyframes borrowPulse {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50%     { opacity: 0.65; transform: scale(1.05); }
-}
-
-/* ---- CATEGORY CHIPS ---- */
-.cat-chip {
-  padding: 5px 12px;
-  border-radius: 20px;
-  border: 1.5px solid var(--border);
-  background: var(--bg-card);
-  font-family: var(--font-main);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all .2s;
-}
-.cat-chip:active { transform: scale(0.96); }
-.cat-chip-active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-  font-weight: 600;
+.shop-badge-bargain {
+  background:#fef3c7;color:#92400e;
+  padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;
+  animation:pulseBright 2s infinite;
 }

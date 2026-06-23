@@ -1,9 +1,8 @@
 // ============================================
-// AUTH — Phone-first, one account per number
+// AUTH - Login & Register
 // ============================================
+
 let currentUser = null;
-let phoneCheckDone = false;
-let isExistingUser = false;
 
 async function initAuth() {
   const savedPhone = localStorage.getItem('lib_phone');
@@ -13,8 +12,6 @@ async function initAuth() {
       currentUser = user;
       showApp();
       return;
-    } else {
-      localStorage.removeItem('lib_phone');
     }
   }
   showAuthScreen();
@@ -23,106 +20,60 @@ async function initAuth() {
 function showAuthScreen() {
   document.getElementById('authScreen').classList.remove('hidden');
   document.getElementById('app').classList.add('hidden');
-  document.getElementById('registerFields').style.display = 'none';
-  document.getElementById('authSubText').textContent = 'স্বাগতম! প্রবেশ করতে নম্বর দিন';
-  document.getElementById('authBtn').textContent = 'পরবর্তী';
-  phoneCheckDone = false;
+  showRegisterFields(true);
+  document.getElementById('authSubText').textContent = 'স্বাগতম! প্রবেশ করতে তথ্য দিন';
+  document.getElementById('authBtn').textContent = 'প্রবেশ করুন';
 }
 
-let phoneTimer = null;
-function onPhoneInput(val) {
-  // Reset when user types
-  if (phoneCheckDone) {
-    phoneCheckDone = false;
-    isExistingUser = false;
-    document.getElementById('registerFields').style.display = 'none';
-    document.getElementById('authBtn').textContent = 'পরবর্তী';
-    document.getElementById('authSubText').textContent = 'স্বাগতম! প্রবেশ করতে নম্বর দিন';
-  }
-  clearTimeout(phoneTimer);
-  if (val.length >= 11) {
-    phoneTimer = setTimeout(() => checkPhone(val), 600);
-  }
+function showRegisterFields(show) {
+  document.getElementById('registerFields').style.display = show ? 'block' : 'none';
 }
 
-async function checkPhone(phone) {
-  const btn = document.getElementById('authBtn');
-  btn.textContent = '...যাচাই হচ্ছে';
-  btn.disabled = true;
-  try {
-    const user = await getUserByPhone(phone);
-    phoneCheckDone = true;
-    if (user) {
-      // Returning user — just enter
-      isExistingUser = true;
-      document.getElementById('registerFields').style.display = 'none';
-      document.getElementById('authSubText').textContent = `স্বাগত ফিরে, ${user.name}! ✅`;
-      btn.textContent = 'প্রবেশ করুন';
-    } else {
-      // New user — show registration fields
-      isExistingUser = false;
-      document.getElementById('registerFields').style.display = 'block';
-      document.getElementById('authSubText').textContent = 'নতুন অ্যাকাউন্ট — তথ্য পূরণ করুন';
-      btn.textContent = 'নিবন্ধন করুন';
-    }
-  } catch(e) {
-    document.getElementById('authSubText').textContent = 'সংযোগ সমস্যা, আবার চেষ্টা করুন';
-    btn.textContent = 'পরবর্তী';
+// Phone input: check if user exists on blur
+document.addEventListener('DOMContentLoaded', () => {
+  const phoneInput = document.getElementById('authPhone');
+  if (phoneInput) {
+    phoneInput.addEventListener('blur', checkIfReturning);
   }
-  btn.disabled = false;
+});
+
+async function checkIfReturning() {
+  const phone = document.getElementById('authPhone').value.trim();
+  if (phone.length < 10) return;
+  const user = await getUserByPhone(phone);
+  if (user) {
+    showRegisterFields(false);
+    document.getElementById('authSubText').textContent = `স্বাগত ফিরে, ${user.name}! শুধু নম্বর দিয়ে ঢুকুন`;
+    document.getElementById('authBtn').textContent = 'প্রবেশ করুন';
+  } else {
+    showRegisterFields(true);
+    document.getElementById('authSubText').textContent = 'নতুন অ্যাকাউন্ট তৈরি করুন';
+    document.getElementById('authBtn').textContent = 'নিবন্ধন করুন';
+  }
 }
 
 async function handleAuth() {
   const phone = document.getElementById('authPhone').value.trim();
   if (!phone || phone.length < 10) { showToast('সঠিক মোবাইল নম্বর দিন'); return; }
 
-  // If phone not checked yet, check first
-  if (!phoneCheckDone) {
-    await checkPhone(phone);
-    return;
-  }
-
   const btn = document.getElementById('authBtn');
   btn.disabled = true; btn.textContent = '...অপেক্ষা করুন';
 
   try {
-    if (isExistingUser) {
-      // Login
-      const user = await getUserByPhone(phone);
-      if (user) {
-        currentUser = user;
-        localStorage.setItem('lib_phone', phone);
-        showApp();
-      } else {
-        showToast('ইউজার পাওয়া যায়নি');
-        btn.disabled = false; btn.textContent = 'প্রবেশ করুন';
-      }
+    const existing = await getUserByPhone(phone);
+    if (existing) {
+      currentUser = existing;
+      localStorage.setItem('lib_phone', phone);
+      showApp();
     } else {
-      // Register
       const name = document.getElementById('regName').value.trim();
       const village = document.getElementById('regVillage').value.trim();
       const upazila = document.getElementById('regUpazila').value.trim();
       const district = document.getElementById('regDistrict').value.trim();
-
       if (!name) { showToast('নাম দিন'); btn.disabled=false; btn.textContent='নিবন্ধন করুন'; return; }
-      if (!village||!upazila||!district) { showToast('ঠিকানা সম্পূর্ণ করুন'); btn.disabled=false; btn.textContent='নিবন্ধন করুন'; return; }
+      if (!village||!upazila||!district) { showToast('এলাকার তথ্য দিন'); btn.disabled=false; btn.textContent='নিবন্ধন করুন'; return; }
 
-      // Double-check number not already taken
-      const existing = await getUserByPhone(phone);
-      if (existing) {
-        showToast('এই নম্বরে আগেই অ্যাকাউন্ট আছে!');
-        isExistingUser = true;
-        document.getElementById('registerFields').style.display = 'none';
-        document.getElementById('authSubText').textContent = `স্বাগত ফিরে, ${existing.name}! ✅`;
-        btn.disabled=false; btn.textContent='প্রবেশ করুন';
-        return;
-      }
-
-      const newUser = {
-        name, phone, village, upazila, district,
-        createdAt: new Date().toISOString(),
-        role: 'user'
-      };
+      const newUser = { name, phone, village, upazila, district, createdAt: new Date().toISOString(), role: 'user' };
       await db.collection(USERS_COL).doc(phone).set(newUser);
       currentUser = newUser;
       localStorage.setItem('lib_phone', phone);
@@ -130,8 +81,7 @@ async function handleAuth() {
     }
   } catch(e) {
     showToast('সমস্যা হয়েছে: ' + e.message);
-    btn.disabled=false;
-    btn.textContent = isExistingUser ? 'প্রবেশ করুন' : 'নিবন্ধন করুন';
+    btn.disabled=false; btn.textContent='প্রবেশ করুন';
   }
 }
 
@@ -151,9 +101,10 @@ function logout() {
   document.getElementById('authPhone').value = '';
 }
 
+// ---- PROFILE ----
 function showProfile() {
   if (!currentUser) return;
-  showModal(`
+  const html = `
     <span class="modal-close" onclick="closeModal()">✕</span>
     <div class="modal-title">👤 আমার প্রোফাইল</div>
     <div class="card" style="margin-bottom:10px;">
@@ -168,13 +119,15 @@ function showProfile() {
       <div class="text-sm text-muted">ঠিকানা</div>
       <div style="font-weight:600;">${currentUser.village||''}, ${currentUser.upazila||''}, ${currentUser.district||''}</div>
     </div>
-    <button class="btn-secondary btn-full" style="margin-bottom:8px;" onclick="showEditProfile()">✏️ প্রোফাইল এডিট</button>
-    <button class="btn-danger btn-full" onclick="logout()">🚪 লগ আউট</button>
-  `);
+    <button class="btn-secondary btn-full" style="margin-bottom:8px;" onclick="showEditProfile()">✏️ প্রোফাইল এডিট করুন</button>
+    ${currentUser.role==='admin'?`<button class="btn-accent btn-full" style="margin-bottom:8px;" onclick="closeModal();navigate('admin')">⚙️ অ্যাডমিন প্যানেল</button>`:''}
+    <button class="btn-danger btn-full" onclick="logout()">লগ আউট</button>
+  `;
+  showModal(html);
 }
 
 function showEditProfile() {
-  showModal(`
+  const html = `
     <span class="modal-close" onclick="closeModal()">✕</span>
     <div class="modal-title">✏️ প্রোফাইল এডিট</div>
     <div class="input-group">
@@ -193,8 +146,9 @@ function showEditProfile() {
       <label>জেলা</label>
       <input type="text" id="editDistrict" value="${currentUser.district||''}">
     </div>
-    <button class="btn-primary btn-full" onclick="saveProfile()">✅ সেভ করুন</button>
-  `);
+    <button class="btn-primary btn-full" onclick="saveProfile()">সেভ করুন</button>
+  `;
+  showModal(html);
 }
 
 async function saveProfile() {

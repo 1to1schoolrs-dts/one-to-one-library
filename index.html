@@ -15,7 +15,6 @@
 </head>
 <body>
 
-<!-- SPLASH -->
 <div id="splash" class="splash">
   <div class="splash-inner">
     <div class="splash-logo">📚</div>
@@ -25,45 +24,26 @@
   </div>
 </div>
 
-<!-- AUTH SCREEN -->
 <div id="authScreen" class="screen hidden">
   <div class="auth-bg"></div>
   <div class="auth-card">
     <div class="auth-logo">📚</div>
     <h2 class="auth-title">ওয়ান টু ওয়ান লাইব্রেরি</h2>
     <p class="auth-sub" id="authSubText">স্বাগতম! প্রবেশ করতে নম্বর দিন</p>
-
-    <!-- Phone first -->
     <div class="input-group">
       <label>মোবাইল নম্বর</label>
       <input type="tel" id="authPhone" placeholder="01XXXXXXXXX" oninput="onPhoneInput(this.value)">
     </div>
-
-    <!-- New user fields - hidden by default -->
     <div id="registerFields" style="display:none;">
-      <div class="input-group">
-        <label>আপনার নাম *</label>
-        <input type="text" id="regName" placeholder="পূর্ণ নাম লিখুন">
-      </div>
-      <div class="input-group">
-        <label>গ্রাম / এলাকা *</label>
-        <input type="text" id="regVillage" placeholder="গ্রাম বা এলাকার নাম">
-      </div>
-      <div class="input-group">
-        <label>উপজেলা *</label>
-        <input type="text" id="regUpazila" placeholder="উপজেলার নাম">
-      </div>
-      <div class="input-group">
-        <label>জেলা *</label>
-        <input type="text" id="regDistrict" placeholder="জেলার নাম">
-      </div>
+      <div class="input-group"><label>আপনার নাম *</label><input type="text" id="regName" placeholder="পূর্ণ নাম লিখুন"></div>
+      <div class="input-group"><label>গ্রাম / এলাকা *</label><input type="text" id="regVillage" placeholder="গ্রাম বা এলাকার নাম"></div>
+      <div class="input-group"><label>উপজেলা *</label><input type="text" id="regUpazila" placeholder="উপজেলার নাম"></div>
+      <div class="input-group"><label>জেলা *</label><input type="text" id="regDistrict" placeholder="জেলার নাম"></div>
     </div>
-
     <button class="btn-primary" id="authBtn" onclick="handleAuth()">প্রবেশ করুন</button>
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="app" class="hidden">
   <header class="topbar">
     <div class="topbar-left">
@@ -83,8 +63,8 @@
     <button class="nav-btn" id="nav-ebook" onclick="navigate('ebook')">
       <span class="nav-icon">📖</span><span class="nav-label">ই-বুক</span>
     </button>
-    <button class="nav-btn" id="nav-booklist" onclick="navigate('booklist')">
-      <span class="nav-icon">🛒</span><span class="nav-label">বইয়ের তালিকা</span>
+    <button class="nav-btn" id="nav-bookshop" onclick="navigate('bookshop')">
+      <span class="nav-icon">🛍️</span><span class="nav-label">বই কিনুন</span>
     </button>
     <button class="nav-btn" id="nav-personal" onclick="navigate('personal')">
       <span class="nav-icon">🏡</span><span class="nav-label">ব্যক্তিগত</span>
@@ -95,7 +75,6 @@
   </nav>
 </div>
 
-<!-- MODAL -->
 <div id="modal" class="modal-overlay hidden" onclick="closeModal(event)">
   <div class="modal-box" id="modalBox"></div>
 </div>
@@ -107,7 +86,7 @@
 <script src="auth.js"></script>
 <script src="home.js"></script>
 <script src="ebook.js"></script>
-<script src="booklist.js"></script>
+<script src="bookshop.js"></script>
 <script src="personal.js"></script>
 <script src="dashboard.js"></script>
 <script src="app.js"></script>
