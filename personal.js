@@ -5,35 +5,32 @@ const CATEGORIES = [
   'সাহিত্য','সিরাত','হাদীস','ইতিহাস','উসুল',
   'ভ্রমণ','শিশু-কিশোর','অন্যান্য'
 ];
-
-let perCurrentCat = 'সব ক্যাটাগরি';
+let perCurrentCat='সব ক্যাটাগরি';
 
 async function renderPersonal(container) {
-  container.innerHTML = `
-    <div class="page">
-      <div class="section-header">
-        <span class="section-title">🏡 ব্যক্তিগত লাইব্রেরি</span>
-        <button class="btn-accent btn-sm" onclick="showAddPersonalBook()">+ বই যোগ</button>
-      </div>
-      <div id="myBookCount" style="margin-bottom:10px;"></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="perCatChips">
-        ${CATEGORIES.map(c=>`<button class="cat-chip ${c==='সব ক্যাটাগরি'?'cat-chip-active':''}" onclick="filterPerCat('${c}')" id="percat-${c}">${c}</button>`).join('')}
-      </div>
-      <div class="search-bar"><span>🔍</span>
-        <input type="text" id="perSearch" placeholder="বই বা মালিকের নাম..." oninput="loadPersonalBooks(this.value)">
-      </div>
-      <div id="personalList"><div class="text-muted text-sm text-center" style="padding:20px;">লোড হচ্ছে...</div></div>
-    </div>`;
+  container.innerHTML=`<div class="page">
+    <div class="section-header">
+      <span class="section-title">🏡 ব্যক্তিগত লাইব্রেরি</span>
+      <button class="btn-accent btn-sm" onclick="showAddPersonalBook()">+ বই যোগ</button>
+    </div>
+    <div id="myBookCount" style="margin-bottom:10px;"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="perCatChips">
+      ${CATEGORIES.map(c=>`<button class="cat-chip ${c==='সব ক্যাটাগরি'?'cat-chip-active':''}" onclick="filterPerCat('${c}')" id="percat-${c}">${c}</button>`).join('')}
+    </div>
+    <div class="search-bar"><span>🔍</span>
+      <input type="text" id="perSearch" placeholder="বই বা মালিকের নাম..." oninput="loadPersonalBooks(this.value)">
+    </div>
+    <div id="personalList"><div class="text-muted text-sm text-center" style="padding:20px;">লোড হচ্ছে...</div></div>
+  </div>`;
   showBookSlogan();
   loadMyBookCount();
   loadPersonalBooks();
 }
 
 function filterPerCat(cat) {
-  perCurrentCat = cat;
+  perCurrentCat=cat;
   document.querySelectorAll('#perCatChips .cat-chip').forEach(c=>c.classList.remove('cat-chip-active'));
-  const el=document.getElementById('percat-'+cat);
-  if(el) el.classList.add('cat-chip-active');
+  const el=document.getElementById('percat-'+cat);if(el)el.classList.add('cat-chip-active');
   loadPersonalBooks(document.getElementById('perSearch')?.value||'');
 }
 
@@ -41,38 +38,35 @@ async function loadMyBookCount() {
   try {
     const snap=await db.collection(PERSONAL_COL).where('ownerPhone','==',currentUser.phone).get();
     const count=snap.size;
-    const el=document.getElementById('myBookCount');
-    if(!el) return;
-    if(count<5) {
+    const el=document.getElementById('myBookCount');if(!el)return;
+    if(count<5){
       el.innerHTML=`<div style="background:#fff3cd;border-radius:8px;padding:10px 12px;font-size:13px;color:#856404;">
-        📚 আপনি <b>${count}টি</b> বই যোগ করেছেন। ধার চাইতে কমপক্ষে <b>৫টি</b> বই যোগ করুন।
+        📚 আপনি <b>${count}টি</b> বই যোগ করেছেন। ধার চাইতে কমপক্ষে <b>৫টি</b> দরকার।
         <div style="background:#e0d8cc;height:6px;border-radius:4px;margin-top:8px;">
           <div style="background:var(--primary);height:6px;border-radius:4px;width:${Math.min(count/5*100,100)}%;"></div>
         </div>
       </div>`;
     } else {
-      el.innerHTML=`<div style="background:#d4edda;border-radius:8px;padding:8px 12px;font-size:13px;color:#155724;">✅ আপনি ${count}টি বই যোগ করেছেন — ধার চাইতে পারবেন</div>`;
+      el.innerHTML=`<div style="background:#d4edda;border-radius:8px;padding:8px 12px;font-size:13px;color:#155724;">✅ ${count}টি বই — ধার চাইতে পারবেন</div>`;
     }
   } catch(e){}
 }
 
-function locationScore(book) {
-  if(!currentUser) return 0;
-  let score=0;
-  if(book.ownerDistrict&&currentUser.district&&book.ownerDistrict.trim()===currentUser.district.trim()) score+=10;
-  if(book.ownerUpazila&&currentUser.upazila&&book.ownerUpazila.trim()===currentUser.upazila.trim()) score+=20;
-  if(book.ownerVillage&&currentUser.village&&book.ownerVillage.trim()===currentUser.village.trim()) score+=30;
-  return score;
+function locationScore(b) {
+  if(!currentUser)return 0;let s=0;
+  if(b.ownerDistrict&&currentUser.district&&b.ownerDistrict.trim()===currentUser.district.trim())s+=10;
+  if(b.ownerUpazila&&currentUser.upazila&&b.ownerUpazila.trim()===currentUser.upazila.trim())s+=20;
+  if(b.ownerVillage&&currentUser.village&&b.ownerVillage.trim()===currentUser.village.trim())s+=30;
+  return s;
 }
 
 async function loadPersonalBooks(search='') {
-  const el=document.getElementById('personalList');
-  if(!el) return;
+  const el=document.getElementById('personalList');if(!el)return;
   try {
     const snap=await db.collection(PERSONAL_COL).get();
     let books=snap.docs.map(d=>({id:d.id,...d.data()}));
     books.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    if(perCurrentCat!=='সব ক্যাটাগরি') books=books.filter(b=>b.category===perCurrentCat);
+    if(perCurrentCat!=='সব ক্যাটাগরি')books=books.filter(b=>b.category===perCurrentCat);
     if(search){const s=search.toLowerCase();books=books.filter(b=>b.title?.toLowerCase().includes(s)||b.ownerName?.toLowerCase().includes(s));}
     books.sort((a,b)=>locationScore(b)-locationScore(a));
     if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">🏡</div><p>কোনো বই নেই</p></div>`;return;}
@@ -103,14 +97,14 @@ async function loadPersonalBooks(search='') {
 async function checkBorrowEligibility(bookId,bookTitle,ownerPhone,ownerName) {
   try {
     const snap=await db.collection(PERSONAL_COL).where('ownerPhone','==',currentUser.phone).get();
-    if(snap.size<5) {
+    if(snap.size<5){
       showModal(`
         <span class="modal-close" onclick="closeModal()">✕</span>
         <div class="modal-title">📚 আগে বই যোগ করুন</div>
         <div style="text-align:center;padding:16px 0;">
           <div style="font-size:48px;margin-bottom:12px;">📖</div>
-          <p style="font-weight:600;color:var(--primary-dark);margin-bottom:8px;">ধার চাইতে হলে নিজের বই যোগ করুন</p>
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">আপনি <b>${snap.size}টি</b> বই যোগ করেছেন।<br>কমপক্ষে <b>৫টি</b> বই যোগ করলে ধার চাইতে পারবেন।</p>
+          <p style="font-weight:600;color:var(--primary-dark);">ধার চাইতে হলে নিজের বই যোগ করুন</p>
+          <p style="font-size:13px;color:var(--text-muted);margin:8px 0 16px;">আপনি <b>${snap.size}টি</b> বই যোগ করেছেন।<br>কমপক্ষে <b>৫টি</b> দরকার।</p>
           <div style="background:#f5f0e8;border-radius:8px;padding:10px;margin-bottom:16px;">
             <div style="font-size:13px;color:var(--text-muted);">অগ্রগতি: ${snap.size}/৫</div>
             <div style="background:#e0d8cc;height:8px;border-radius:4px;margin-top:6px;">
@@ -124,7 +118,7 @@ async function checkBorrowEligibility(bookId,bookTitle,ownerPhone,ownerName) {
       return;
     }
     showBorrowRequest(bookId,bookTitle,ownerPhone,ownerName);
-  } catch(e){showToast('সমস্যা হয়েছে: '+e.message);}
+  } catch(e){showToast('সমস্যা হয়েছে');}
 }
 
 function showBookSlogan() {
@@ -150,11 +144,10 @@ function showAddPersonalBook() {
 
 async function submitPersonalBook() {
   const title=document.getElementById('perTitle').value.trim();
-  if(!title) return showToast('বইয়ের নাম দিন');
-  try {
+  if(!title)return showToast('বইয়ের নাম দিন');
+  try{
     await db.collection(PERSONAL_COL).add({
-      title,
-      author:document.getElementById('perAuthor').value.trim(),
+      title,author:document.getElementById('perAuthor').value.trim(),
       category:document.getElementById('perCategory').value,
       description:document.getElementById('perDesc').value.trim(),
       ownerPhone:currentUser.phone,ownerName:currentUser.name,
@@ -162,7 +155,7 @@ async function submitPersonalBook() {
       available:true,createdAt:new Date().toISOString()
     });
     closeModal();showToast('✅ বই যোগ হয়েছে!');navigate('personal');
-  } catch(e){showToast('সমস্যা হয়েছে: '+e.message);}
+  }catch(e){showToast('সমস্যা: '+e.message);}
 }
 
 async function showBorrowRequest(bookId,bookTitle,ownerPhone,ownerName) {
@@ -175,12 +168,11 @@ async function showBorrowRequest(bookId,bookTitle,ownerPhone,ownerName) {
     </div>
     <div class="input-group"><label>ধার নেওয়ার তারিখ *</label>
       <input type="date" id="borrFrom" value="${new Date().toISOString().split('T')[0]}"></div>
-    <div class="input-group"><label>ফেরত দেওয়ার তারিখ *</label>
-      <input type="date" id="borrTo"></div>
+    <div class="input-group"><label>ফেরত দেওয়ার তারিখ *</label><input type="date" id="borrTo"></div>
     <div class="input-group"><label>বার্তা (ঐচ্ছিক)</label>
-      <textarea id="borrMsg" placeholder="মালিককে কিছু জানাতে চাইলে লিখুন..."></textarea></div>
+      <textarea id="borrMsg" placeholder="মালিককে কিছু জানাতে চাইলে..."></textarea></div>
     <div style="background:#e8f4fd;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;color:#0c5460;">
-      ℹ️ অনুরোধ পাঠানোর পর মালিক অ্যাপে দেখতে পাবেন। অনুমোদন হলে রশিদ পাবেন।
+      ℹ️ অনুরোধ মালিকের নোটিফিকেশনে যাবে। অনুমোদনের পর রশিদ পাবেন।
     </div>
     <button class="btn-primary btn-full" onclick="submitBorrowRequest('${bookId}','${escHtml(bookTitle)}','${ownerPhone}','${escHtml(ownerName)}')">📚 অনুরোধ পাঠান</button>
   `);
@@ -192,23 +184,26 @@ async function submitBorrowRequest(bookId,bookTitle,ownerPhone,ownerName) {
   const fromDate=document.getElementById('borrFrom').value;
   const toDate=document.getElementById('borrTo').value;
   const msg=document.getElementById('borrMsg').value;
-  if(!fromDate||!toDate) return showToast('তারিখ দিন');
-  try {
-    await db.collection(BORROW_COL).add({
+  if(!fromDate||!toDate)return showToast('তারিখ দিন');
+  try{
+    const borrowRef=await db.collection(BORROW_COL).add({
       bookId,bookTitle,ownerPhone,ownerName,
       borrowerPhone:currentUser.phone,borrowerName:currentUser.name,
       borrowerVillage:currentUser.village||'',borrowerUpazila:currentUser.upazila||'',
-      fromDate,toDate,message:msg,
-      status:'requested',createdAt:new Date().toISOString()
+      fromDate,toDate,message:msg,status:'requested',createdAt:new Date().toISOString()
     });
-    closeModal();
-    showToast('✅ অনুরোধ পাঠানো হয়েছে!');
-    navigate('personal');
-  } catch(e){showToast('সমস্যা হয়েছে: '+e.message);}
+    // Send notification to owner
+    await sendNotif(ownerPhone,'borrow_request',{
+      title:'📚 নতুন ধারের অনুরোধ',
+      body:`${currentUser.name} "${bookTitle}" বইটি ধার চাইছেন`,
+      relatedId:borrowRef.id,fromName:currentUser.name,bookTitle
+    });
+    closeModal();showToast('✅ অনুরোধ পাঠানো হয়েছে!');navigate('personal');
+  }catch(e){showToast('সমস্যা: '+e.message);}
 }
 
 async function showMyBookDetail(bookId) {
-  try {
+  try{
     const docSnap=await db.collection(PERSONAL_COL).doc(bookId).get();
     if(!docSnap.exists){showToast('বই পাওয়া যায়নি');return;}
     const b=docSnap.data();
@@ -219,7 +214,7 @@ async function showMyBookDetail(bookId) {
         <div class="flex-between">
           <div class="history-title">👤 ${br.borrowerName}</div>
           <span class="badge ${br.status==='returned'?'badge-green':br.status==='approved'?'badge-blue':br.status==='rejected'?'badge-red':'badge-yellow'}">
-            ${br.status==='returned'?'ফেরত':br.status==='approved'?'ধার দেওয়া':br.status==='rejected'?'প্রত্যাখ্যাত':'অনুরোধ'}
+            ${br.status==='returned'?'ফেরত':br.status==='approved'?'ধার দেওয়া':br.status==='rejected'?'না':'অনুরোধ'}
           </span>
         </div>
         <div class="history-date">📍 ${br.borrowerVillage||''}, ${br.borrowerUpazila||''}</div>
@@ -227,11 +222,10 @@ async function showMyBookDetail(bookId) {
         ${br.message?`<div class="text-sm text-muted">"${br.message}"</div>`:''}
         ${br.status==='requested'?`
           <div style="display:flex;gap:6px;margin-top:8px;">
-            <button class="btn-primary btn-sm" onclick="approveBorrow('${br.id}','${bookId}','${escHtml(br.borrowerName)}','${escHtml(b.title)}','${br.fromDate}','${br.toDate}')">✅ অনুমোদন</button>
-            <button class="btn-danger btn-sm" onclick="rejectBorrow('${br.id}')">❌ না</button>
+            <button class="btn-primary btn-sm" onclick="approveBorrow('${br.id}','${bookId}','${escHtml(br.borrowerName)}','${escHtml(b.title)}','${br.fromDate}','${br.toDate}','${br.borrowerPhone}')">✅ অনুমোদন</button>
+            <button class="btn-danger btn-sm" onclick="rejectBorrow('${br.id}','${br.borrowerPhone}','${escHtml(b.title)}')">❌ না</button>
           </div>`:''}
-        ${br.status==='approved'?`
-          <button class="btn-secondary btn-sm" style="margin-top:8px;" onclick="markReturned('${br.id}','${bookId}')">📦 ফেরত পেয়েছি</button>`:''}
+        ${br.status==='approved'?`<button class="btn-secondary btn-sm" style="margin-top:8px;" onclick="markReturned('${br.id}','${bookId}','${br.borrowerPhone}','${escHtml(b.title)}')">📦 ফেরত পেয়েছি</button>`:''}
       </div>`).join('')
     :'<div class="text-muted text-sm">কোনো অনুরোধ নেই</div>';
 
@@ -247,12 +241,12 @@ async function showMyBookDetail(bookId) {
       <div style="font-weight:600;font-size:14px;margin-bottom:10px;">📋 ধারের অনুরোধ (${borrows.length}টি):</div>
       ${borrowList}
     `);
-  } catch(e){showToast('লোড সমস্যা: '+e.message);}
+  }catch(e){showToast('লোড সমস্যা: '+e.message);}
 }
 
 function showEditPersonalBook(bookId) {
   db.collection(PERSONAL_COL).doc(bookId).get().then(doc=>{
-    if(!doc.exists) return showToast('পাওয়া যায়নি');
+    if(!doc.exists)return showToast('পাওয়া যায়নি');
     const b=doc.data();
     showModal(`
       <span class="modal-close" onclick="closeModal()">✕</span>
@@ -269,50 +263,62 @@ function showEditPersonalBook(bookId) {
 
 async function savePersonalBookEdit(bookId) {
   const title=document.getElementById('editPerTitle').value.trim();
-  if(!title) return showToast('বইয়ের নাম দিন');
-  try {
+  if(!title)return showToast('নাম দিন');
+  try{
     await db.collection(PERSONAL_COL).doc(bookId).update({
-      title,
-      author:document.getElementById('editPerAuthor').value.trim(),
+      title,author:document.getElementById('editPerAuthor').value.trim(),
       category:document.getElementById('editPerCategory').value,
       description:document.getElementById('editPerDesc').value.trim()
     });
     closeModal();showToast('✅ আপডেট হয়েছে!');navigate('personal');
-  } catch(e){showToast('সমস্যা: '+e.message);}
+  }catch(e){showToast('সমস্যা: '+e.message);}
 }
 
-async function approveBorrow(borrowId,bookId,borrowerName,bookTitle,fromDate,toDate) {
-  try {
+async function approveBorrow(borrowId,bookId,borrowerName,bookTitle,fromDate,toDate,borrowerPhone) {
+  try{
     await db.collection(BORROW_COL).doc(borrowId).update({status:'approved'});
     await db.collection(PERSONAL_COL).doc(bookId).update({available:false});
+    // Notify borrower
+    await sendNotif(borrowerPhone,'borrow_approved',{
+      title:'✅ ধারের অনুরোধ অনুমোদিত!',
+      body:`"${bookTitle}" বইটি আপনাকে ধার দেওয়া হয়েছে।`,
+      relatedId:borrowId,bookTitle
+    });
     closeModal();
+    showBorrowReceipt({borrowId,bookTitle,borrowerName,ownerName:currentUser.name,
+      ownerPhone:currentUser.phone,borrowerPhone,fromDate,toDate});
     showToast('✅ অনুমোদন দেওয়া হয়েছে!');
-    // Show receipt
-    setTimeout(()=>showBorrowReceipt({borrowId,bookTitle,borrowerName,ownerName:currentUser.name,fromDate,toDate}),300);
-  } catch(e){showToast('সমস্যা: '+e.message);}
+  }catch(e){showToast('সমস্যা: '+e.message);}
 }
 
-async function rejectBorrow(borrowId) {
+async function rejectBorrow(borrowId,borrowerPhone,bookTitle) {
   try{
     await db.collection(BORROW_COL).doc(borrowId).update({status:'rejected'});
+    await sendNotif(borrowerPhone,'borrow_rejected',{
+      title:'❌ ধারের অনুরোধ প্রত্যাখ্যাত',
+      body:`"${bookTitle}" বইটি এই মুহূর্তে ধার দেওয়া সম্ভব হচ্ছে না।`,
+      relatedId:borrowId,bookTitle
+    });
     closeModal();showToast('প্রত্যাখ্যান করা হয়েছে');navigate('personal');
   }catch(e){showToast('সমস্যা হয়েছে');}
 }
 
-async function markReturned(borrowId,bookId) {
+async function markReturned(borrowId,bookId,borrowerPhone,bookTitle) {
   try{
     await db.collection(BORROW_COL).doc(borrowId).update({status:'returned'});
     await db.collection(PERSONAL_COL).doc(bookId).update({available:true});
-    closeModal();showToast('✅ ফেরত চিহ্নিত হয়েছে!');navigate('personal');
+    await sendNotif(borrowerPhone,'borrow_returned',{
+      title:'📦 বই ফেরত নিশ্চিত',
+      body:`"${bookTitle}" বইটি ফেরত পাওয়া হয়েছে।`,relatedId:borrowId,bookTitle
+    });
+    closeModal();showToast('✅ ফেরত চিহ্নিত!');navigate('personal');
   }catch(e){showToast('সমস্যা হয়েছে');}
 }
 
 async function deletePersonalBook(bookId) {
-  if(!confirm('বইটি মুছে ফেলবেন?')) return;
-  try{
-    await db.collection(PERSONAL_COL).doc(bookId).delete();
-    closeModal();showToast('মুছে ফেলা হয়েছে');navigate('personal');
-  }catch(e){showToast('সমস্যা হয়েছে');}
+  if(!confirm('বইটি মুছে ফেলবেন?'))return;
+  try{await db.collection(PERSONAL_COL).doc(bookId).delete();closeModal();showToast('মুছে ফেলা হয়েছে');navigate('personal');}
+  catch(e){showToast('সমস্যা হয়েছে');}
 }
 
 function showBorrowReceipt(data) {
@@ -331,8 +337,12 @@ function showBorrowReceipt(data) {
         <div><b>রশিদ নং:</b> ${receiptId}</div>
         <div><b>তারিখ:</b> ${date}</div>
         <div><b>বইয়ের নাম:</b> ${data.bookTitle}</div>
-        <div><b>মালিক:</b> ${data.ownerName}</div>
-        <div><b>গ্রহীতা:</b> ${data.borrowerName}</div>
+        <div><b>মালিক:</b> ${data.ownerName}
+          <button onclick="copyToClipboard('${data.ownerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${data.ownerPhone} কপি</button>
+        </div>
+        <div><b>গ্রহীতা:</b> ${data.borrowerName}
+          <button onclick="copyToClipboard('${data.borrowerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${data.borrowerPhone} কপি</button>
+        </div>
         <div><b>ধার নেওয়ার তারিখ:</b> ${data.fromDate||''}</div>
         <div><b>ফেরতের তারিখ:</b> ${data.toDate||''}</div>
         <div><b>অবস্থা:</b> ✅ অনুমোদিত</div>
@@ -346,11 +356,10 @@ function showBorrowReceipt(data) {
 }
 
 function printBorrowReceipt() {
-  const c=document.getElementById('borrowReceiptContent');
-  if(!c) return;
+  const c=document.getElementById('borrowReceiptContent');if(!c)return;
   const w=window.open('','_blank');
   w.document.write(`<html><head><title>ধারের রশিদ</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;max-width:400px;margin:0 auto;font-size:14px;line-height:1.8;}</style>
+    <style>body{font-family:Arial,sans-serif;padding:20px;max-width:400px;margin:0 auto;font-size:14px;line-height:1.8;}button{display:none;}</style>
     </head><body>${c.innerHTML}<script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
   w.document.close();
 }

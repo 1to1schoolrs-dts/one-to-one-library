@@ -52,6 +52,11 @@
     </div>
     <div class="topbar-right">
       <span class="user-greeting" id="userGreeting"></span>
+      <!-- Notification Bell -->
+      <button class="icon-btn" id="notifBell" onclick="showNotifications()" style="position:relative;">
+        🔔
+        <span id="notifBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#e74c3c;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;align-items:center;justify-content:center;padding:0 3px;"></span>
+      </button>
       <button class="icon-btn" onclick="showProfile()">👤</button>
     </div>
   </header>
@@ -84,6 +89,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="auth.js"></script>
+<script src="notifications.js"></script>
 <script src="home.js"></script>
 <script src="ebook.js"></script>
 <script src="bookshop.js"></script>

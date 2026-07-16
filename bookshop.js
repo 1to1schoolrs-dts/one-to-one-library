@@ -32,20 +32,17 @@ async function checkUserLibrary(){
   try{const s=await db.collection(LIBRARIES_COL).where('ownerPhone','==',currentUser.phone).get();
   userLibrary=s.empty?null:{id:s.docs[0].id,...s.docs[0].data()};}catch(e){userLibrary=null;}
 }
-
 function switchShopView(v){
   shopView=v;
   ['books','libraries'].forEach(t=>{const b=document.getElementById('svtab-'+t);if(b)b.className=t===v?'btn-primary btn-sm':'btn-secondary btn-sm';});
   v==='libraries'?loadLibraries():loadShopBooks();
 }
-
 function shopSelectCat(cat){
   shopCurrentCat=cat;
   document.querySelectorAll('#shopCatChips .cat-chip').forEach(c=>c.classList.remove('cat-chip-active'));
   const el=document.getElementById('shopcat-'+cat);if(el)el.classList.add('cat-chip-active');
   loadShopBooks();
 }
-
 async function loadShopBooks(filterLibId=null){
   const el=document.getElementById('shopContent');if(!el)return;
   el.innerHTML='<div class="text-muted text-sm text-center" style="padding:20px;">লোড হচ্ছে...</div>';
@@ -88,21 +85,19 @@ async function loadShopBooks(filterLibId=null){
             <button class="btn-secondary btn-sm" onclick="showEditShopBook('${b.id}')">✏️ এডিট</button>
             <button class="btn-danger btn-sm" onclick="deleteShopBook('${b.id}')">🗑️</button>`
           :`<button class="btn-primary btn-sm" onclick="showBuyBook('${b.id}')">🛒 কিনুন</button>
-            ${b.bargainable?`<button class="btn-secondary btn-sm" onclick="showBargain('${b.id}','${escHtml(b.title)}','${b.salePrice}','${b.sellerPhone}','${escHtml(b.libraryName)}')">💬 বারগেইন</button>`:''}
+            ${b.bargainable?`<button class="btn-secondary btn-sm" onclick="showBargainStart('${b.id}','${escHtml(b.title)}','${b.salePrice}','${b.sellerPhone}','${escHtml(b.libraryName)}')">💬 বারগেইন</button>`:''}
             <button class="btn-secondary btn-sm" onclick="addToCart('${b.id}','${escHtml(b.title)}',${b.salePrice},'${b.libraryId}','${escHtml(b.libraryName)}','${b.sellerPhone}')">🧺 কার্ট</button>`}
         </div>
       </div>`;
     }).join('');
   }catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা: ${e.message}</p></div>`;}
 }
-
 function shopLocScore(b){
   if(!currentUser)return 0;let s=0;
   if(b.libraryDistrict&&currentUser.district&&b.libraryDistrict.trim()===currentUser.district.trim())s+=10;
   if(b.libraryUpazila&&currentUser.upazila&&b.libraryUpazila.trim()===currentUser.upazila.trim())s+=20;
   return s;
 }
-
 async function loadMyLibraryBooks(){if(!userLibrary)return;switchShopView('books');loadShopBooks(userLibrary.id);}
 
 async function loadLibraries(){
@@ -141,7 +136,6 @@ async function showAddLibrary(){
     <button class="btn-primary" onclick="submitLibrary()">নিবন্ধন করুন</button>
   `);
 }
-
 async function submitLibrary(){
   const name=document.getElementById('libName').value.trim();
   const address=document.getElementById('libAddress').value.trim();
@@ -170,7 +164,7 @@ function showAddShopBook(libId,libName){
     <div class="input-group"><label>প্রকাশনী</label><input type="text" id="sbPublisher"></div>
     <div class="input-group"><label>ক্যাটাগরি *</label>
       <select id="sbCategory">${CATEGORIES.filter(c=>c!=='সব ক্যাটাগরি').map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
-    <div class="input-group"><label>বই সম্পর্কে লিখুন *</label><textarea id="sbDesc" placeholder="বিষয়বস্তু, সংস্করণ ইত্যাদি..."></textarea></div>
+    <div class="input-group"><label>বই সম্পর্কে লিখুন *</label><textarea id="sbDesc" placeholder="বিষয়বস্তু, সংস্করণ..."></textarea></div>
     <div class="form-row">
       <div class="input-group"><label>মুদ্রিত মূল্য (৳)</label><input type="number" id="sbPrintPrice" min="0" value="0"></div>
       <div class="input-group"><label>বিক্রয় মূল্য (৳) *</label><input type="number" id="sbSalePrice" min="0"></div>
@@ -183,7 +177,6 @@ function showAddShopBook(libId,libName){
     <button class="btn-primary" onclick="submitShopBook('${libId}','${escHtml(libName)}')">বই যোগ করুন</button>
   `);
 }
-
 async function submitShopBook(libId,libName){
   const title=document.getElementById('sbTitle').value.trim();
   const author=document.getElementById('sbAuthor').value.trim();
@@ -233,7 +226,6 @@ async function showEditShopBook(bookId){
     <button class="btn-danger btn-full" style="margin-top:8px;" onclick="deleteShopBook('${bookId}')">🗑️ মুছুন</button>
   `);
 }
-
 async function saveShopBookEdit(bookId){
   const title=document.getElementById('editSbTitle').value.trim();
   const salePrice=Number(document.getElementById('editSbSale').value);
@@ -249,16 +241,15 @@ async function saveShopBookEdit(bookId){
     closeModal();showToast('✅ আপডেট হয়েছে!');navigate('bookshop');
   }catch(e){showToast('সমস্যা: '+e.message);}
 }
-
 async function deleteShopBook(id){
   if(!confirm('বইটি মুছে ফেলবেন?'))return;
   try{await db.collection(SHOP_COL).doc(id).delete();closeModal();showToast('মুছে ফেলা হয়েছে');navigate('bookshop');}
   catch(e){showToast('সমস্যা হয়েছে');}
 }
 
+// ---- BUY ----
 async function showBuyBook(bookId){
-  const doc=await db.collection(SHOP_COL).doc(bookId).get();
-  const b=doc.data();
+  const doc=await db.collection(SHOP_COL).doc(bookId).get();const b=doc.data();
   showModal(`
     <span class="modal-close" onclick="closeModal()">✕</span>
     <div class="modal-title">🛒 বই কিনুন</div>
@@ -270,34 +261,28 @@ async function showBuyBook(bookId){
     </div>
     <div class="input-group"><label>কপির সংখ্যা</label>
       <input type="number" id="buyQty" value="1" min="1" max="${b.stock||1}" oninput="updateBuyTotal(${b.salePrice})"></div>
-    <div class="card" style="margin-bottom:14px;">
-      <div class="flex-between"><span>মোট:</span>
-        <span id="buyTotal" style="font-weight:700;color:var(--primary);font-size:18px;">৳${b.salePrice}</span></div>
-    </div>
+    <div class="card" style="margin-bottom:14px;"><div class="flex-between"><span>মোট:</span>
+      <span id="buyTotal" style="font-weight:700;color:var(--primary);font-size:18px;">৳${b.salePrice}</span></div></div>
     <div class="input-group"><label>ডেলিভারি ঠিকানা *</label>
       <textarea id="buyAddress">${currentUser.village||''}, ${currentUser.upazila||''}, ${currentUser.district||''}</textarea></div>
     <div class="input-group"><label>বিশেষ নির্দেশনা</label><input type="text" id="buyNote" placeholder="কিছু জানাতে চাইলে..."></div>
     <div style="background:#e8f4fd;border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px;color:#0c5460;">
-      ℹ️ অর্ডার কনফার্ম হলে বিক্রেতা অ্যাপে দেখতে পাবেন। অনুমোদনের পর উভয়পক্ষ রশিদ পাবেন।
+      ℹ️ বিক্রেতা অনুমোদন দিলে উভয়পক্ষের নাম্বারসহ রশিদ পাবেন।
     </div>
     <button class="btn-primary btn-full" onclick="confirmPurchase('${bookId}')">✅ অর্ডার কনফার্ম</button>
   `);
 }
-
 function updateBuyTotal(price){
   const qty=Number(document.getElementById('buyQty').value)||1;
   const el=document.getElementById('buyTotal');if(el)el.textContent=`৳${price*qty}`;
 }
-
 async function confirmPurchase(bookId){
   const qty=Number(document.getElementById('buyQty').value)||1;
   const address=document.getElementById('buyAddress').value.trim();
   const note=document.getElementById('buyNote').value.trim();
   if(!address)return showToast('ঠিকানা দিন');
-  const doc=await db.collection(SHOP_COL).doc(bookId).get();
-  const b=doc.data();
-  const total=b.salePrice*qty;
-  const orderId='ORD-'+Date.now();
+  const doc=await db.collection(SHOP_COL).doc(bookId).get();const b=doc.data();
+  const total=b.salePrice*qty;const orderId='ORD-'+Date.now();
   try{
     const orderData={orderId,bookId,bookTitle:b.title,author:b.author||'',
       libraryId:b.libraryId,libraryName:b.libraryName,
@@ -308,51 +293,200 @@ async function confirmPurchase(bookId){
     await db.collection(SHOP_ORDERS_COL).add(orderData);
     const newStock=(b.stock||1)-qty;
     await db.collection(SHOP_COL).doc(bookId).update({stock:newStock,available:newStock>0});
+    // Notify seller
+    await sendNotif(b.sellerPhone,'purchase_order',{
+      title:'🛒 নতুন ক্রয় অর্ডার!',
+      body:`${currentUser.name} "${b.title}" বইটি কিনতে চাইছেন। ৳${total}`,
+      relatedId:orderId,bookTitle:b.title
+    });
     closeModal();showToast('✅ অর্ডার পাঠানো হয়েছে! বিক্রেতা অনুমোদন দিলে রশিদ পাবেন।');
     navigate('bookshop');
   }catch(e){showToast('সমস্যা: '+e.message);}
 }
 
-async function showBargain(bookId,bookTitle,currentPrice,sellerPhone,libraryName){
+// ---- BARGAIN (2x2 system) ----
+async function showBargainStart(bookId,bookTitle,originalPrice,sellerPhone,libraryName){
   showModal(`
     <span class="modal-close" onclick="closeModal()">✕</span>
-    <div class="modal-title">💬 বারগেইন করুন</div>
+    <div class="modal-title">💬 বারগেইন শুরু করুন</div>
     <div class="card" style="margin-bottom:14px;">
       <div style="font-weight:600;">${bookTitle}</div>
-      <div style="color:var(--primary);font-weight:700;">বর্তমান মূল্য: ৳${currentPrice}</div>
+      <div style="color:var(--primary);font-weight:700;">নির্ধারিত মূল্য: ৳${originalPrice}</div>
+    </div>
+    <div style="background:#fff3cd;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;color:#856404;">
+      💬 আপনি সর্বোচ্চ <b>২ বার</b> দাম প্রস্তাব করতে পারবেন। বিক্রেতাও ২ বার পাল্টা প্রস্তাব করতে পারবেন।
     </div>
     <div class="input-group"><label>আপনার প্রস্তাবিত মূল্য (৳) *</label>
-      <input type="number" id="bargainPrice" placeholder="আপনার দাম" max="${currentPrice}"></div>
-    <div class="input-group"><label>বার্তা</label><textarea id="bargainMsg" placeholder="বিক্রেতাকে কিছু বলতে চাইলে..."></textarea></div>
-    <div style="background:#e8f4fd;border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px;color:#0c5460;">
-      ℹ️ প্রস্তাব বিক্রেতা অ্যাপে দেখতে পাবেন। সম্মত হলে অর্ডার তৈরি হবে।
-    </div>
-    <button class="btn-primary btn-full" onclick="submitBargain('${bookId}','${escHtml(bookTitle)}','${currentPrice}','${sellerPhone}','${escHtml(libraryName)}')">💬 প্রস্তাব পাঠান</button>
+      <input type="number" id="bargainPrice1" placeholder="আপনার দাম" max="${originalPrice}"></div>
+    <div class="input-group"><label>বার্তা (ঐচ্ছিক)</label>
+      <textarea id="bargainMsg1" placeholder="বিক্রেতাকে কিছু বলতে চাইলে..."></textarea></div>
+    <button class="btn-primary btn-full" onclick="submitBargainOffer('${bookId}','${escHtml(bookTitle)}','${originalPrice}','${sellerPhone}','${escHtml(libraryName)}')">💬 প্রস্তাব পাঠান</button>
   `);
 }
 
-async function submitBargain(bookId,bookTitle,currentPrice,sellerPhone,libraryName){
-  const price=document.getElementById('bargainPrice').value;
-  const msg=document.getElementById('bargainMsg').value;
+async function submitBargainOffer(bookId,bookTitle,originalPrice,sellerPhone,libraryName){
+  const price=Number(document.getElementById('bargainPrice1').value);
+  const msg=document.getElementById('bargainMsg1').value;
   if(!price)return showToast('মূল্য লিখুন');
-  if(Number(price)>=Number(currentPrice))return showToast('বর্তমান মূল্যের চেয়ে কম দিন');
+  if(price>=Number(originalPrice))return showToast('নির্ধারিত মূল্যের চেয়ে কম দিন');
   try{
-    await db.collection(BARGAINS_COL).add({
-      bookId,bookTitle,libraryName,currentPrice:Number(currentPrice),offeredPrice:Number(price),
-      message:msg,buyerPhone:currentUser.phone,buyerName:currentUser.name,
-      sellerPhone,status:'pending',createdAt:new Date().toISOString()
+    const bargainRef=await db.collection(BARGAINS_COL).add({
+      bookId,bookTitle,libraryName,originalPrice:Number(originalPrice),
+      currentPrice:price,
+      buyerPhone:currentUser.phone,buyerName:currentUser.name,
+      sellerPhone,
+      status:'pending',
+      currentTurn:'seller',
+      buyerRounds:1,sellerRounds:0,
+      rounds:[{by:'buyer',byName:currentUser.name,price,message:msg,createdAt:new Date().toISOString()}],
+      createdAt:new Date().toISOString()
+    });
+    await sendNotif(sellerPhone,'bargain_offer',{
+      title:'💬 বারগেইন প্রস্তাব!',
+      body:`${currentUser.name} "${bookTitle}" বইয়ের জন্য ৳${price} প্রস্তাব করেছেন`,
+      relatedId:bargainRef.id,bookTitle
     });
     closeModal();showToast('✅ প্রস্তাব পাঠানো হয়েছে!');
   }catch(e){showToast('সমস্যা হয়েছে');}
 }
 
+// Show bargain detail and response options
+async function showBargainDetail(bargainId){
+  const doc=await db.collection(BARGAINS_COL).doc(bargainId).get();
+  if(!doc.exists)return showToast('পাওয়া যায়নি');
+  const bg=doc.data();
+  const isBuyer=bg.buyerPhone===currentUser.phone;
+  const isSeller=bg.sellerPhone===currentUser.phone;
+  const myTurn=(isBuyer&&bg.currentTurn==='buyer')||(isSeller&&bg.currentTurn==='seller');
+
+  // Count my rounds
+  const myRounds=isBuyer?bg.buyerRounds:bg.sellerRounds;
+  const canCounter=myTurn&&myRounds<2&&bg.status==='pending';
+
+  const roundsHTML=bg.rounds.map((r,i)=>`
+    <div style="background:${r.by==='buyer'?'#e8f4fd':'#f0f9f4'};border-radius:8px;padding:10px;margin-bottom:8px;">
+      <div style="font-size:12px;color:var(--text-muted);">${r.by==='buyer'?'ক্রেতা':'বিক্রেতা'}: ${r.byName} — রাউন্ড ${Math.floor(i/2)+1}</div>
+      <div style="font-weight:700;color:var(--primary);font-size:16px;">৳${r.price}</div>
+      ${r.message?`<div class="text-sm text-muted">"${r.message}"</div>`:''}
+      <div style="font-size:11px;color:var(--text-muted);">${timeAgo(r.createdAt)}</div>
+    </div>`).join('');
+
+  let actionHTML='';
+  if(bg.status==='pending'&&myTurn){
+    actionHTML=`
+      <div class="divider"></div>
+      <div style="font-weight:600;margin-bottom:10px;">আপনার পালা (${myRounds}/${isBuyer?2:2} প্রস্তাব করেছেন):</div>
+      <div style="display:flex;gap:8px;margin-bottom:${canCounter?'10px':'0'};">
+        <button class="btn-primary btn-sm" style="flex:1;" onclick="acceptBargainOffer('${bargainId}')">✅ সম্মত হন</button>
+        <button class="btn-danger btn-sm" style="flex:1;" onclick="rejectBargainOffer('${bargainId}')">❌ না</button>
+      </div>
+      ${canCounter?`
+        <div class="input-group" style="margin-top:8px;"><label>পাল্টা প্রস্তাব (৳)</label>
+          <input type="number" id="counterPrice" placeholder="আপনার দাম" 
+            ${isBuyer?`max="${bg.currentPrice}"`:`min="${bg.currentPrice}"`}></div>
+        <div class="input-group"><label>বার্তা</label>
+          <textarea id="counterMsg" placeholder="কিছু বলতে চাইলে..."></textarea></div>
+        <button class="btn-secondary btn-full" onclick="submitCounterOffer('${bargainId}')">💬 পাল্টা প্রস্তাব পাঠান</button>
+      `:'<div class="text-sm text-muted text-center" style="margin-top:8px;">আপনার সর্বোচ্চ ২টি প্রস্তাব শেষ</div>'}
+    `;
+  } else if(bg.status==='pending'&&!myTurn){
+    actionHTML=`<div style="background:#fff3cd;border-radius:8px;padding:10px;text-align:center;font-size:13px;color:#856404;">⏳ অপরপক্ষের সাড়ার অপেক্ষায়...</div>`;
+  }
+
+  showModal(`
+    <span class="modal-close" onclick="closeModal()">✕</span>
+    <div class="modal-title">💬 বারগেইন বিস্তারিত</div>
+    <div class="card" style="margin-bottom:14px;">
+      <div style="font-weight:600;">${bg.bookTitle}</div>
+      <div style="font-size:13px;color:var(--text-muted);">মূল মূল্য: ৳${bg.originalPrice}</div>
+      <span class="badge ${bg.status==='accepted'?'badge-green':bg.status==='rejected'?'badge-red':'badge-yellow'}">
+        ${bg.status==='accepted'?'সম্মত':bg.status==='rejected'?'না':'চলছে'}</span>
+    </div>
+    <div style="margin-bottom:12px;">${roundsHTML}</div>
+    ${actionHTML}
+    ${bg.status==='accepted'?`<div style="background:#d4edda;border-radius:8px;padding:10px;text-align:center;font-weight:600;color:#155724;">✅ ৳${bg.currentPrice} মূল্যে সম্মত হয়েছেন!</div>`:''}
+  `);
+}
+
+async function acceptBargainOffer(bargainId){
+  const doc=await db.collection(BARGAINS_COL).doc(bargainId).get();
+  const bg=doc.data();
+  try{
+    await db.collection(BARGAINS_COL).doc(bargainId).update({status:'accepted'});
+    // Create confirmed order
+    const orderId='ORD-'+Date.now();
+    const orderData={
+      orderId,bookId:bg.bookId,bookTitle:bg.bookTitle,
+      libraryName:bg.libraryName,libraryId:'',
+      sellerPhone:bg.sellerPhone,sellerName:'',
+      buyerPhone:bg.buyerPhone,buyerName:bg.buyerName,
+      qty:1,unitPrice:bg.currentPrice,total:bg.currentPrice,
+      address:'বারগেইন অর্ডার — সরাসরি যোগাযোগ করুন',note:'',
+      status:'confirmed',createdAt:new Date().toISOString()
+    };
+    await db.collection(SHOP_ORDERS_COL).add(orderData);
+    const otherPhone=bg.buyerPhone===currentUser.phone?bg.sellerPhone:bg.buyerPhone;
+    const otherName=bg.buyerPhone===currentUser.phone?'বিক্রেতা':'ক্রেতা';
+    await sendNotif(otherPhone,'bargain_accepted',{
+      title:'✅ বারগেইনে সম্মত!',
+      body:`"${bg.bookTitle}" — ৳${bg.currentPrice} মূল্যে চুক্তি হয়েছে`,
+      relatedId:bargainId,bookTitle:bg.bookTitle
+    });
+    closeModal();showToast('✅ বারগেইনে সম্মত!');
+    setTimeout(()=>showPurchaseReceipt(orderData),300);
+  }catch(e){showToast('সমস্যা হয়েছে');}
+}
+
+async function rejectBargainOffer(bargainId){
+  const doc=await db.collection(BARGAINS_COL).doc(bargainId).get();
+  const bg=doc.data();
+  try{
+    await db.collection(BARGAINS_COL).doc(bargainId).update({status:'rejected'});
+    const otherPhone=bg.buyerPhone===currentUser.phone?bg.sellerPhone:bg.buyerPhone;
+    await sendNotif(otherPhone,'bargain_rejected',{
+      title:'❌ বারগেইন প্রত্যাখ্যাত',
+      body:`"${bg.bookTitle}" বইয়ের বারগেইন সম্ভব হয়নি`,
+      relatedId:bargainId,bookTitle:bg.bookTitle
+    });
+    closeModal();showToast('প্রত্যাখ্যান করা হয়েছে');
+  }catch(e){showToast('সমস্যা হয়েছে');}
+}
+
+async function submitCounterOffer(bargainId){
+  const price=Number(document.getElementById('counterPrice').value);
+  const msg=document.getElementById('counterMsg').value;
+  if(!price)return showToast('মূল্য লিখুন');
+  const doc=await db.collection(BARGAINS_COL).doc(bargainId).get();
+  const bg=doc.data();
+  const isBuyer=bg.buyerPhone===currentUser.phone;
+  if(isBuyer&&price>=bg.currentPrice)return showToast('কমের প্রস্তাব দিন');
+  if(!isBuyer&&price<=bg.currentPrice)return showToast('বেশির প্রস্তাব দিন');
+  try{
+    const newRounds=[...bg.rounds,{by:isBuyer?'buyer':'seller',byName:currentUser.name,price,message:msg,createdAt:new Date().toISOString()}];
+    await db.collection(BARGAINS_COL).doc(bargainId).update({
+      currentPrice:price,
+      currentTurn:isBuyer?'seller':'buyer',
+      buyerRounds:isBuyer?bg.buyerRounds+1:bg.buyerRounds,
+      sellerRounds:!isBuyer?bg.sellerRounds+1:bg.sellerRounds,
+      rounds:newRounds
+    });
+    const otherPhone=isBuyer?bg.sellerPhone:bg.buyerPhone;
+    await sendNotif(otherPhone,'bargain_counter',{
+      title:`💬 পাল্টা বারগেইন প্রস্তাব`,
+      body:`"${bg.bookTitle}" — ${currentUser.name} ৳${price} প্রস্তাব করেছেন`,
+      relatedId:bargainId,bookTitle:bg.bookTitle
+    });
+    closeModal();showToast('✅ পাল্টা প্রস্তাব পাঠানো হয়েছে!');
+  }catch(e){showToast('সমস্যা: '+e.message);}
+}
+
+// ---- CART ----
 function addToCart(bookId,bookTitle,price,libId,libName,sellerPhone){
   if(!shopCart[libId])shopCart[libId]={libraryName:libName,sellerPhone,items:[]};
   const ex=shopCart[libId].items.find(i=>i.bookId===bookId);
   if(ex){ex.qty++;}else{shopCart[libId].items.push({bookId,bookTitle,price,qty:1});}
   updateCartBar();showToast('✅ কার্টে যোগ হয়েছে');
 }
-
 function updateCartBar(){
   const el=document.getElementById('cartBar');if(!el)return;
   const count=Object.values(shopCart).reduce((s,l)=>s+l.items.reduce((a,i)=>a+i.qty,0),0);
@@ -363,7 +497,6 @@ function updateCartBar(){
     <button style="background:#fff;color:var(--primary);border:none;border-radius:6px;padding:5px 10px;font-weight:600;cursor:pointer;" onclick="showCart()">কার্ট →</button>
   </div>`;
 }
-
 function showCart(){
   if(!Object.keys(shopCart).length){showToast('কার্ট খালি');return;}
   let html=`<span class="modal-close" onclick="closeModal()">✕</span><div class="modal-title">🧺 আমার কার্ট</div>`;
@@ -385,7 +518,6 @@ function showCart(){
   });
   showModal(html);
 }
-
 function changeCartQty(libId,bookId,delta){
   const item=shopCart[libId]?.items.find(i=>i.bookId===bookId);if(!item)return;
   item.qty+=delta;
@@ -393,7 +525,6 @@ function changeCartQty(libId,bookId,delta){
   if(!shopCart[libId]?.items.length)delete shopCart[libId];
   updateCartBar();showCart();
 }
-
 async function checkoutLibrary(libId){
   const lib=shopCart[libId];if(!lib)return;
   showModal(`
@@ -409,7 +540,6 @@ async function checkoutLibrary(libId){
     <button class="btn-primary btn-full" onclick="submitCartOrder('${libId}')">🛒 অর্ডার দিন</button>
   `);
 }
-
 async function submitCartOrder(libId){
   const lib=shopCart[libId];
   const address=document.getElementById('cartAddress').value.trim();
@@ -424,25 +554,30 @@ async function submitCartOrder(libId){
       items:lib.items,total,address,note:document.getElementById('cartNote').value,
       status:'pending',createdAt:new Date().toISOString()
     });
+    await sendNotif(lib.sellerPhone,'purchase_order',{
+      title:'🛒 নতুন ক্রয় অর্ডার!',
+      body:`${currentUser.name} ${lib.items.length}টি বই কিনতে চাইছেন। ৳${total}`,
+      bookTitle:lib.items.map(i=>i.bookTitle).join(', ')
+    });
     delete shopCart[libId];updateCartBar();
     closeModal();showToast('✅ অর্ডার পাঠানো হয়েছে!');navigate('bookshop');
   }catch(e){showToast('সমস্যা: '+e.message);}
 }
 
+// ---- ORDERS ----
 async function showMyShopOrders(){
   showModal(`
     <span class="modal-close" onclick="closeModal()">✕</span>
     <div class="modal-title">📦 আমার অর্ডার</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <button class="btn-primary btn-sm" id="ord-buy" onclick="loadMyBuyOrders()">🛒 কিনেছি</button>
       <button class="btn-secondary btn-sm" id="ord-sell" onclick="loadMySellOrders()">🏪 বিক্রি</button>
-      <button class="btn-secondary btn-sm" id="ord-barg" onclick="loadMyBargains()">💬 বারগেইন</button>
+      <button class="btn-secondary btn-sm" id="ord-barg" onclick="loadMyBargainsList()">💬 বারগেইন</button>
     </div>
     <div id="myOrdersList"><div class="text-muted text-sm">লোড হচ্ছে...</div></div>
   `);
   loadMyBuyOrders();
 }
-
 function setOrdTab(t){['buy','sell','barg'].forEach(x=>{const b=document.getElementById('ord-'+x);if(b)b.className=x===t?'btn-primary btn-sm':'btn-secondary btn-sm';});}
 
 async function loadMyBuyOrders(){
@@ -453,14 +588,14 @@ async function loadMyBuyOrders(){
     if(!orders.length){el.innerHTML=`<div class="empty-state"><p>কোনো ক্রয় নেই</p></div>`;return;}
     el.innerHTML=orders.map(o=>`<div class="history-item type-order">
       <div class="flex-between"><div class="history-title">📗 ${o.bookTitle}</div>
-        <span class="badge ${o.status==='confirmed'?'badge-green':'badge-yellow'}">${o.status==='confirmed'?'নিশ্চিত':'অপেক্ষামান'}</span></div>
+        <span class="badge ${o.status==='confirmed'?'badge-green':o.status==='cancelled'?'badge-red':'badge-yellow'}">${o.status==='confirmed'?'নিশ্চিত':o.status==='cancelled'?'বাতিল':'অপেক্ষামান'}</span></div>
       <div class="history-date">🏪 ${o.libraryName} · ৳${o.total}</div>
       <div class="history-date">📅 ${formatDate(o.createdAt)}</div>
-      ${o.status==='confirmed'?`<button class="btn-secondary btn-sm" style="margin-top:6px;" onclick='showPurchaseReceipt(${JSON.stringify(o).replace(/'/g,"&#39;")})'>🧾 রশিদ দেখুন</button>`:'<div class="text-sm text-muted" style="margin-top:4px;">⏳ বিক্রেতার অনুমোদনের অপেক্ষায়</div>'}
+      ${o.status==='confirmed'?`<button class="btn-secondary btn-sm" style="margin-top:6px;" onclick='showPurchaseReceipt(${JSON.stringify(o).replace(/'/g,"&#39;")})'>🧾 রশিদ দেখুন</button>`
+      :'<div class="text-sm text-muted" style="margin-top:4px;">⏳ বিক্রেতার অনুমোদনের অপেক্ষায়</div>'}
     </div>`).join('');
   }catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`;}
 }
-
 async function loadMySellOrders(){
   setOrdTab('sell');const el=document.getElementById('myOrdersList');if(!el)return;
   try{
@@ -474,14 +609,13 @@ async function loadMySellOrders(){
       <div class="history-date">📍 ${o.address}</div>
       <div class="history-date">📅 ${formatDate(o.createdAt)}</div>
       ${o.status==='pending'?`<div style="display:flex;gap:6px;margin-top:8px;">
-        <button class="btn-primary btn-sm" onclick='confirmSaleOrder("${o.id}",${JSON.stringify(o).replace(/'/g,"&#39;")})'>✅ অনুমোদন ও রশিদ</button>
+        <button class="btn-primary btn-sm" onclick='confirmSaleOrder("${o.id}",${JSON.stringify(o).replace(/'/g,"&#39;")})'>✅ অনুমোদন</button>
         <button class="btn-danger btn-sm" onclick="cancelSaleOrder('${o.id}')">❌ বাতিল</button>
       </div>`:`<button class="btn-secondary btn-sm" style="margin-top:6px;" onclick='showPurchaseReceipt(${JSON.stringify(o).replace(/'/g,"&#39;")})'>🧾 রশিদ দেখুন</button>`}
     </div>`).join('');
   }catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`;}
 }
-
-async function loadMyBargains(){
+async function loadMyBargainsList(){
   setOrdTab('barg');const el=document.getElementById('myOrdersList');if(!el)return;
   try{
     const[bs,ss]=await Promise.all([
@@ -492,15 +626,14 @@ async function loadMyBargains(){
     if(!all.length){el.innerHTML=`<div class="empty-state"><p>কোনো বারগেইন নেই</p></div>`;return;}
     el.innerHTML=all.map(b=>{
       const isBuyer=b.buyerPhone===currentUser.phone;
-      return `<div class="history-item">
+      const myTurn=(isBuyer&&b.currentTurn==='buyer')||(!isBuyer&&b.currentTurn==='seller');
+      return `<div class="history-item" style="${myTurn&&b.status==='pending'?'border-left:3px solid var(--accent);':''}">
         <div class="flex-between"><div class="history-title">💬 ${b.bookTitle}</div>
-          <span class="badge ${b.status==='accepted'?'badge-green':b.status==='rejected'?'badge-red':'badge-yellow'}">${b.status==='accepted'?'সম্মত':b.status==='rejected'?'না':'অপেক্ষামান'}</span></div>
-        <div class="history-date">৳${b.currentPrice} → প্রস্তাব: ৳${b.offeredPrice}</div>
+          <span class="badge ${b.status==='accepted'?'badge-green':b.status==='rejected'?'badge-red':'badge-yellow'}">${b.status==='accepted'?'সম্মত':b.status==='rejected'?'না':'চলছে'}</span></div>
+        <div class="history-date">মূল: ৳${b.originalPrice} → বর্তমান: ৳${b.currentPrice}</div>
         <div class="history-date">${isBuyer?`বিক্রেতা: ${b.libraryName}`:`ক্রেতা: ${b.buyerName}`}</div>
-        ${!isBuyer&&b.status==='pending'?`<div style="display:flex;gap:6px;margin-top:8px;">
-          <button class="btn-primary btn-sm" onclick="acceptBargain('${b.id}','${b.bookId}','${escHtml(b.bookTitle)}','${b.offeredPrice}','${b.buyerPhone}','${escHtml(b.buyerName)}')">✅ সম্মত</button>
-          <button class="btn-danger btn-sm" onclick="rejectBargain('${b.id}')">❌ না</button>
-        </div>`:''}
+        ${myTurn&&b.status==='pending'?`<div style="color:var(--accent);font-size:12px;font-weight:600;">⚡ আপনার পালা!</div>`:''}
+        <button class="btn-secondary btn-sm" style="margin-top:6px;" onclick="showBargainDetail('${b.id}')">💬 বিস্তারিত দেখুন</button>
       </div>`;
     }).join('');
   }catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`;}
@@ -510,36 +643,21 @@ async function confirmSaleOrder(orderId,orderData){
   try{
     await db.collection(SHOP_ORDERS_COL).doc(orderId).update({status:'confirmed'});
     orderData.status='confirmed';
-    showToast('✅ অর্ডার নিশ্চিত!');
-    showPurchaseReceipt(orderData);
+    await sendNotif(orderData.buyerPhone,'purchase_confirmed',{
+      title:'✅ আপনার অর্ডার নিশ্চিত!',
+      body:`"${orderData.bookTitle}" — ৳${orderData.total}`,
+      bookTitle:orderData.bookTitle
+    });
+    showToast('✅ অর্ডার নিশ্চিত!');showPurchaseReceipt(orderData);
   }catch(e){showToast('সমস্যা হয়েছে');}
 }
-
 async function cancelSaleOrder(orderId){
   if(!confirm('বাতিল করবেন?'))return;
   try{await db.collection(SHOP_ORDERS_COL).doc(orderId).update({status:'cancelled'});showToast('বাতিল হয়েছে');loadMySellOrders();}
   catch(e){showToast('সমস্যা হয়েছে');}
 }
 
-async function acceptBargain(bargainId,bookId,bookTitle,price,buyerPhone,buyerName){
-  try{
-    await db.collection(BARGAINS_COL).doc(bargainId).update({status:'accepted'});
-    const orderId='ORD-'+Date.now();
-    const orderData={orderId,bookId,bookTitle,libraryName:userLibrary?.name||'',libraryId:userLibrary?.id||'',
-      sellerPhone:currentUser.phone,sellerName:currentUser.name,buyerPhone,buyerName,
-      qty:1,unitPrice:Number(price),total:Number(price),
-      address:'বারগেইন অর্ডার',note:'',status:'confirmed',createdAt:new Date().toISOString()};
-    await db.collection(SHOP_ORDERS_COL).add(orderData);
-    closeModal();showToast('✅ বারগেইনে সম্মত!');
-    setTimeout(()=>showPurchaseReceipt(orderData),300);
-  }catch(e){showToast('সমস্যা হয়েছে');}
-}
-
-async function rejectBargain(id){
-  try{await db.collection(BARGAINS_COL).doc(id).update({status:'rejected'});showToast('প্রত্যাখ্যান করা হয়েছে');loadMyBargains();}
-  catch(e){showToast('সমস্যা হয়েছে');}
-}
-
+// ---- RECEIPT (with copy buttons) ----
 function showPurchaseReceipt(order){
   const date=new Date().toLocaleDateString('bn-BD');
   showModal(`
@@ -556,8 +674,12 @@ function showPurchaseReceipt(order){
         <div><b>তারিখ:</b> ${date}</div>
         <div><b>বই:</b> ${order.bookTitle}</div>
         <div><b>লাইব্রেরি:</b> ${order.libraryName}</div>
-        <div><b>বিক্রেতা:</b> ${order.sellerName||''} · 📞 ${order.sellerPhone||''}</div>
-        <div><b>ক্রেতা:</b> ${order.buyerName||''} · 📞 ${order.buyerPhone||''}</div>
+        <div><b>বিক্রেতা:</b> ${order.sellerName||''}
+          ${order.sellerPhone?`<button onclick="copyToClipboard('${order.sellerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${order.sellerPhone} কপি</button>`:''}
+        </div>
+        <div><b>ক্রেতা:</b> ${order.buyerName||''}
+          ${order.buyerPhone?`<button onclick="copyToClipboard('${order.buyerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${order.buyerPhone} কপি</button>`:''}
+        </div>
         <div><b>ঠিকানা:</b> ${order.address||''}</div>
         <div><b>পরিমাণ:</b> ${order.qty||1} কপি</div>
       </div>
@@ -569,12 +691,11 @@ function showPurchaseReceipt(order){
     <button class="btn-primary btn-full" onclick="printShopReceipt()">🖨️ রশিদ প্রিন্ট / ডাউনলোড</button>
   `);
 }
-
 function printShopReceipt(){
   const c=document.getElementById('shopReceiptContent');if(!c)return;
   const w=window.open('','_blank');
   w.document.write(`<html><head><title>রশিদ</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;max-width:400px;margin:0 auto;font-size:14px;line-height:1.8;}</style>
+    <style>body{font-family:Arial,sans-serif;padding:20px;max-width:400px;margin:0 auto;font-size:14px;line-height:1.8;}button{display:none;}</style>
     </head><body>${c.innerHTML}<script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
   w.document.close();
 }
