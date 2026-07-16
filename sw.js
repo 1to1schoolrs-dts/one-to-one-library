@@ -1,4 +1,4 @@
-const CACHE_NAME = 'one-to-one-lib-v8';
+const CACHE_NAME = 'one-to-one-lib-v9';
 const ASSETS = ['./', './index.html', './style.css',
   './firebase-config.js', './auth.js', './app.js',
   './home.js', './ebook.js', './bookshop.js',
