@@ -1,4 +1,3 @@
-// Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAJu6xcxKeE03xAfhZC69SljlBedbwAsIM",
   authDomain: "one-to-one-library.firebaseapp.com",
@@ -10,12 +9,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-
-// Collections
-const USERS_COL      = "users";
-const EBOOKS_COL     = "ebooks";
-const PERSONAL_COL   = "personal_books";
-const ORDERS_COL     = "orders";
-const BORROW_COL     = "borrows";
-const SETTINGS_COL   = "settings";
-const NOTIF_COL      = "notifications";
+const USERS_COL='users', EBOOKS_COL='ebooks', PERSONAL_COL='personal_books';
+const ORDERS_COL='orders', BORROW_COL='borrows', SETTINGS_COL='settings';
+const NOTIF_COL='notifications', COMPLAINTS_COL='complaints';

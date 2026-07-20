@@ -290,14 +290,14 @@ async function confirmPurchase(bookId){
       buyerPhone:currentUser.phone,buyerName:currentUser.name,
       qty,unitPrice:b.salePrice,total,address,note,
       status:'pending',createdAt:new Date().toISOString()};
-    await db.collection(SHOP_ORDERS_COL).add(orderData);
+    const orderRef=await db.collection(SHOP_ORDERS_COL).add(orderData);
     const newStock=(b.stock||1)-qty;
     await db.collection(SHOP_COL).doc(bookId).update({stock:newStock,available:newStock>0});
-    // Notify seller
+    // Notify seller — relatedId = Firestore doc ID
     await sendNotif(b.sellerPhone,'purchase_order',{
       title:'🛒 নতুন ক্রয় অর্ডার!',
       body:`${currentUser.name} "${b.title}" বইটি কিনতে চাইছেন। ৳${total}`,
-      relatedId:orderId,bookTitle:b.title
+      relatedId:orderRef.id,bookTitle:b.title
     });
     closeModal();showToast('✅ অর্ডার পাঠানো হয়েছে! বিক্রেতা অনুমোদন দিলে রশিদ পাবেন।');
     navigate('bookshop');
