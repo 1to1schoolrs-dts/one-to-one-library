@@ -433,10 +433,10 @@ function showBorrowReceipt(data) {
         <div><b>তারিখ:</b> ${date}</div>
         <div><b>বইয়ের নাম:</b> ${data.bookTitle}</div>
         <div><b>মালিক:</b> ${data.ownerName}
-          <button onclick="copyToClipboard('${data.ownerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${data.ownerPhone} কপি</button>
+          <button class="no-capture" onclick="copyToClipboard('${data.ownerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${data.ownerPhone} কপি</button>
         </div>
         <div><b>গ্রহীতা:</b> ${data.borrowerName}
-          <button onclick="copyToClipboard('${data.borrowerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${data.borrowerPhone} কপি</button>
+          <button class="no-capture" onclick="copyToClipboard('${data.borrowerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${data.borrowerPhone} কপি</button>
         </div>
         <div><b>ধার নেওয়ার তারিখ:</b> ${data.fromDate||''}</div>
         <div><b>ফেরতের তারিখ:</b> ${data.toDate||''}</div>
@@ -446,15 +446,6 @@ function showBorrowReceipt(data) {
         সময়মতো ফেরত দিন। ধন্যবাদ! 📚
       </div>
     </div>
-    <button class="btn-primary btn-full" onclick="printBorrowReceipt()">🖨️ রশিদ প্রিন্ট</button>
+    ${receiptActionButtons('borrowReceiptContent')}
   `);
-}
-
-function printBorrowReceipt() {
-  const c=document.getElementById('borrowReceiptContent');if(!c)return;
-  const w=window.open('','_blank');
-  w.document.write(`<html><head><title>ধারের রশিদ</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;max-width:400px;margin:0 auto;font-size:14px;line-height:1.8;}button{display:none;}</style>
-    </head><body>${c.innerHTML}<script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
-  w.document.close();
 }

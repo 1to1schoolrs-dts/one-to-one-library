@@ -93,6 +93,85 @@ function copyToClipboard(text) {
   });
 }
 
+// ============================================
+// রশিদের জন্য প্রিন্ট / PDF / ছবি কপি বাটন
+// contentId: রশিদের HTML যে div-এ আছে তার id
+// ============================================
+function receiptActionButtons(contentId) {
+  return `
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn-primary btn-sm" style="flex:1;" onclick="printReceiptEl('${contentId}')">🖨️ প্রিন্ট</button>
+      <button class="btn-secondary btn-sm" style="flex:1;" onclick="downloadReceiptPDF('${contentId}')">📄 PDF</button>
+      <button class="btn-secondary btn-sm" style="flex:1;" onclick="copyReceiptImage('${contentId}')">🖼️ কপি</button>
+    </div>
+  `;
+}
+
+function printReceiptEl(contentId) {
+  const c = document.getElementById(contentId);
+  if (!c) return showToast('রশিদ পাওয়া যায়নি');
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>রশিদ</title>
+    <style>body{font-family:Arial,sans-serif;padding:20px;max-width:400px;margin:0 auto;font-size:14px;line-height:1.8;}button{display:none;}</style>
+    </head><body>${c.innerHTML}<script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
+  w.document.close();
+}
+
+async function downloadReceiptPDF(contentId) {
+  const c = document.getElementById(contentId);
+  if (!c) return showToast('রশিদ পাওয়া যায়নি');
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    return showToast('PDF লোড হচ্ছে, একটু পর আবার চেষ্টা করুন');
+  }
+  showToast('PDF তৈরি হচ্ছে...');
+  try {
+    const canvas = await html2canvas(c, { scale: 2, backgroundColor: '#ffffff', ignoreElements: (el) => el.classList && el.classList.contains('no-capture') });
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save(`রশিদ_${Date.now()}.pdf`);
+    showToast('✅ PDF ডাউনলোড হয়েছে!');
+  } catch (e) {
+    showToast('PDF তৈরিতে সমস্যা হয়েছে');
+  }
+}
+
+async function copyReceiptImage(contentId) {
+  const c = document.getElementById(contentId);
+  if (!c) return showToast('রশিদ পাওয়া যায়নি');
+  if (typeof html2canvas === 'undefined') {
+    return showToast('একটু পর আবার চেষ্টা করুন');
+  }
+  showToast('ছবি তৈরি হচ্ছে...');
+  try {
+    const canvas = await html2canvas(c, { scale: 2, backgroundColor: '#ffffff', ignoreElements: (el) => el.classList && el.classList.contains('no-capture') });
+    canvas.toBlob(async (blob) => {
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          showToast('✅ ছবি কপি হয়েছে! WhatsApp/Messenger-এ পেস্ট করুন');
+        } else {
+          // Fallback: download image if clipboard image API not supported
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = `রশিদ_${Date.now()}.png`;
+          a.click(); URL.revokeObjectURL(url);
+          showToast('✅ ছবি ডাউনলোড হয়েছে (কপি সাপোর্ট নেই এই ব্রাউজারে)');
+        }
+      } catch (err) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `রশিদ_${Date.now()}.png`;
+        a.click(); URL.revokeObjectURL(url);
+        showToast('✅ ছবি ডাউনলোড হয়েছে');
+      }
+    }, 'image/png');
+  } catch (e) {
+    showToast('ছবি তৈরিতে সমস্যা হয়েছে');
+  }
+}
+
 window.addEventListener('load',async()=>{
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
   setTimeout(async()=>{

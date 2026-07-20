@@ -675,10 +675,10 @@ function showPurchaseReceipt(order){
         <div><b>বই:</b> ${order.bookTitle}</div>
         <div><b>লাইব্রেরি:</b> ${order.libraryName}</div>
         <div><b>বিক্রেতা:</b> ${order.sellerName||''}
-          ${order.sellerPhone?`<button onclick="copyToClipboard('${order.sellerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${order.sellerPhone} কপি</button>`:''}
+          ${order.sellerPhone?`<button class="no-capture" onclick="copyToClipboard('${order.sellerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${order.sellerPhone} কপি</button>`:''}
         </div>
         <div><b>ক্রেতা:</b> ${order.buyerName||''}
-          ${order.buyerPhone?`<button onclick="copyToClipboard('${order.buyerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${order.buyerPhone} কপি</button>`:''}
+          ${order.buyerPhone?`<button class="no-capture" onclick="copyToClipboard('${order.buyerPhone}')" style="margin-left:6px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:11px;cursor:pointer;">📞 ${order.buyerPhone} কপি</button>`:''}
         </div>
         <div><b>ঠিকানা:</b> ${order.address||''}</div>
         <div><b>পরিমাণ:</b> ${order.qty||1} কপি</div>
@@ -688,14 +688,6 @@ function showPurchaseReceipt(order){
       </div>
       <div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:8px;">ধন্যবাদ! 📚</div>
     </div>
-    <button class="btn-primary btn-full" onclick="printShopReceipt()">🖨️ রশিদ প্রিন্ট / ডাউনলোড</button>
+    ${receiptActionButtons('shopReceiptContent')}
   `);
-}
-function printShopReceipt(){
-  const c=document.getElementById('shopReceiptContent');if(!c)return;
-  const w=window.open('','_blank');
-  w.document.write(`<html><head><title>রশিদ</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;max-width:400px;margin:0 auto;font-size:14px;line-height:1.8;}button{display:none;}</style>
-    </head><body>${c.innerHTML}<script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
-  w.document.close();
 }
