@@ -337,6 +337,17 @@ async function submitComplaint(borrowId,bookTitle,targetPhone,targetName) {
         relatedId:ref.id
       });
     }
+    // সংশ্লিষ্ট ব্যক্তিকেও জানানো — যেন আগের "সফলভাবে ফেরত" নোটিফিকেশনের পাশে
+    // এই আপডেটটাও দেখতে পান যে বিষয়টি নিয়ে অভিযোগ দাখিল হয়েছে
+    await sendNotif(targetPhone,'complaint_new',{
+      title:'⚠️ আপনার বিষয়ে অভিযোগ দাখিল হয়েছে',
+      body:`"${bookTitle}" বই নিয়ে ${currentUser.name} অ্যাডমিনের কাছে অভিযোগ করেছেন`,
+      relatedId:ref.id
+    });
+    // এই ধারের রেকর্ডে অভিযোগ চিহ্ন যোগ করা — যেন হিস্টরিতে "অভিযোগসহ" দেখায়
+    if (borrowId && borrowId !== 'TBD') {
+      try { await db.collection(BORROW_COL).doc(borrowId).update({ hasComplaint: true }); } catch(e) {}
+    }
     closeModal();showToast('✅ অভিযোগ পাঠানো হয়েছে!');
   } catch(e){showToast('সমস্যা: '+e.message);}
 }

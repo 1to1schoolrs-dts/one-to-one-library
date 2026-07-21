@@ -54,45 +54,87 @@ function loadDashTab(tab) {
   }
 }
 
-// ---- ধার হিস্টরি (active + returned) ----
+// ---- ধার হিস্টরি — দুই ভাগে: আমি যা ধার নিয়েছি / আমি যা ধার দিয়েছি ----
+let borrowSubTab='taken';
+
 async function loadMyBorrows() {
   const el=document.getElementById('dashContent'); if(!el) return;
+  el.innerHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="btn-primary btn-sm" id="bsub-taken" onclick="switchBorrowSubTab('taken')" style="flex:1;">📥 আমি যা ধার নিয়েছি</button>
+      <button class="btn-secondary btn-sm" id="bsub-given" onclick="switchBorrowSubTab('given')" style="flex:1;">📤 আমি যা ধার দিয়েছি</button>
+    </div>
+    <div id="borrowSubContent"><div class="text-muted text-sm">লোড হচ্ছে...</div></div>
+  `;
+  loadBorrowSubContent();
+}
+
+function switchBorrowSubTab(tab) {
+  borrowSubTab=tab;
+  const t=document.getElementById('bsub-taken'), g=document.getElementById('bsub-given');
+  if(t) t.className = tab==='taken' ? 'btn-primary btn-sm' : 'btn-secondary btn-sm';
+  if(g) g.className = tab==='given' ? 'btn-primary btn-sm' : 'btn-secondary btn-sm';
+  loadBorrowSubContent();
+}
+
+async function loadBorrowSubContent() {
+  const el=document.getElementById('borrowSubContent'); if(!el) return;
   el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
   try {
-    // As borrower
-    const borSnap=await db.collection(BORROW_COL).where('borrowerPhone','==',currentUser.phone).get();
-    // As owner
-    const ownSnap=await db.collection(BORROW_COL).where('ownerPhone','==',currentUser.phone).get();
+    let items;
+    if (borrowSubTab==='taken') {
+      // আমি যা অন্যের কাছ থেকে ধার নিয়েছি
+      const snap=await db.collection(BORROW_COL).where('borrowerPhone','==',currentUser.phone).get();
+      items=snap.docs.map(d=>({id:d.id,role:'borrower',...d.data()}));
+    } else {
+      // আমি যা অন্যকে ধার দিয়েছি
+      const snap=await db.collection(BORROW_COL).where('ownerPhone','==',currentUser.phone).get();
+      items=snap.docs.map(d=>({id:d.id,role:'owner',...d.data()}));
+    }
+    items.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
 
-    const asBorrower=borSnap.docs.map(d=>({id:d.id,role:'borrower',...d.data()}));
-    const asOwner=ownSnap.docs.map(d=>({id:d.id,role:'owner',...d.data()}));
-    const all=[...asBorrower,...asOwner].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    if(!items.length){
+      el.innerHTML=`<div class="empty-state"><div class="empty-icon">📚</div><p>${borrowSubTab==='taken'?'আপনি কারো কাছ থেকে বই ধার নেননি':'আপনি কাউকে বই ধার দেননি'}</p></div>`;
+      return;
+    }
 
-    if(!all.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📚</div><p>কোনো ধারের রেকর্ড নেই</p></div>`;return;}
-
-    // Separate active vs returned
-    const active=all.filter(b=>b.status==='approved'||b.status==='requested');
-    const returned=all.filter(b=>b.status==='returned'||b.status==='rejected');
+    const active=items.filter(b=>b.status==='approved'||b.status==='requested');
+    const finished=items.filter(b=>b.status==='returned'||b.status==='rejected');
 
     let html='';
-
     if(active.length) {
       html+=`<div style="font-weight:700;color:var(--primary-dark);margin-bottom:8px;font-size:14px;">📌 সক্রিয় (${active.length}টি)</div>`;
       html+=active.map(b=>borrowCard(b)).join('');
     }
-    if(returned.length) {
-      html+=`<div style="font-weight:700;color:var(--text-muted);margin:14px 0 8px;font-size:14px;">✅ সম্পন্ন (${returned.length}টি)</div>`;
-      html+=returned.map(b=>borrowCard(b,true)).join('');
+    if(finished.length) {
+      html+=`<div style="font-weight:700;color:var(--text-muted);margin:14px 0 8px;font-size:14px;">✅ সম্পন্ন (${finished.length}টি)</div>`;
+      html+=finished.map(b=>borrowCard(b,true)).join('');
     }
-
     el.innerHTML=html;
-  } catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`;}
+  } catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা: ${e.message}</p></div>`;}
 }
 
 function borrowCard(b, isHistory=false) {
   const isBorrower=b.role==='borrower';
+  const hasComplaint=!!b.hasComplaint;
   const badge=b.status==='returned'?'badge-green':b.status==='approved'?(b.returnRequested?'badge-yellow':'badge-blue'):b.status==='rejected'?'badge-red':'badge-yellow';
-  const label=b.status==='returned'?'ফেরত দিয়েছি':b.status==='approved'?(b.returnRequested?'⚡ ফেরত পাঠানো':'ধার নিয়েছি'):b.status==='rejected'?'প্রত্যাখ্যাত':'অনুরোধ করেছি';
+
+  // ভূমিকা অনুযায়ী আলাদা লেখা — গ্রহীতা vs মালিক
+  let label;
+  if (isBorrower) {
+    // আমি যা ধার নিয়েছি অন্যের কাছ থেকে
+    if (b.status==='returned') label = hasComplaint ? '⚠️ অভিযোগসহ ফেরত দিয়েছি' : 'ফেরত দিয়েছি';
+    else if (b.status==='approved') label = b.returnRequested ? '⚡ ফেরত পাঠানো হচ্ছে' : 'ধার নিয়েছি';
+    else if (b.status==='rejected') label = 'প্রত্যাখ্যাত হয়েছি';
+    else label = 'অনুরোধ করেছি';
+  } else {
+    // আমি যা অন্যকে ধার দিয়েছি
+    if (b.status==='returned') label = hasComplaint ? '⚠️ অভিযোগসহ ফেরত নিয়েছি' : 'ফেরত নিয়েছি';
+    else if (b.status==='approved') label = b.returnRequested ? '⚡ ফেরত চাইছে' : 'ধার দিয়েছি';
+    else if (b.status==='rejected') label = 'প্রত্যাখ্যান করেছি';
+    else label = 'অনুরোধ এসেছে';
+  }
+
   const otherLabel=isBorrower?`মালিক: ${b.ownerName}`:`গ্রহীতা: ${b.borrowerName}`;
   const otherPhone=isBorrower?b.ownerPhone:b.borrowerPhone;
 
@@ -104,6 +146,20 @@ function borrowCard(b, isHistory=false) {
     actionHTML=`<div style="color:var(--accent);font-size:12px;font-weight:600;margin-top:6px;">⏳ ফেরতের অনুরোধ পাঠানো হয়েছে</div>`;
   }
 
+  // ফেরত সংক্রান্ত সফলতার বার্তা — ভূমিকা ও অভিযোগ অনুযায়ী
+  let returnedNote='';
+  if (b.status==='returned') {
+    if (isBorrower) {
+      returnedNote = hasComplaint
+        ? `<div class="text-sm" style="color:var(--danger);">⚠️ অভিযোগসহ ফেরত দেওয়া হয়েছে</div>`
+        : `<div class="text-sm" style="color:var(--success);">✅ সফলভাবে ফেরত দেওয়া হয়েছে</div>`;
+    } else {
+      returnedNote = hasComplaint
+        ? `<div class="text-sm" style="color:var(--danger);">⚠️ অভিযোগসহ ফেরত নেওয়া হয়েছে</div>`
+        : `<div class="text-sm" style="color:var(--success);">✅ সফলভাবে ফেরত নেওয়া হয়েছে</div>`;
+    }
+  }
+
   return `<div class="history-item type-borrow" onclick="showBorrowDetail('${b.id}')" style="cursor:pointer;">
     <div class="flex-between">
       <div class="history-title">📕 ${b.bookTitle}</div>
@@ -111,7 +167,7 @@ function borrowCard(b, isHistory=false) {
     </div>
     <div class="history-date">${otherLabel}</div>
     <div class="history-date">📅 ${b.fromDate} → ${b.toDate}</div>
-    ${b.status==='returned'?`<div class="text-sm" style="color:var(--success);">✅ সফলভাবে ফেরত দেওয়া হয়েছে</div>`:''}
+    ${returnedNote}
     ${actionHTML}
     <div class="text-sm text-muted" style="margin-top:4px;">→ বিস্তারিত দেখতে ক্লিক করুন</div>
   </div>`;
