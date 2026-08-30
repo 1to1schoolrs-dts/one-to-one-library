@@ -10,8 +10,11 @@ function showApp() {
   loadNotifCount();
   // Refresh notif count every 30 seconds
   setInterval(loadNotifCount, 30000);
-  if (window.location.hash.includes('admin-')) navigate('admin');
-  else navigate('home');
+  // Load admin-managed categories before rendering pages
+  loadCategoriesFromDB().then(()=>{
+    if (window.location.hash.includes('admin-')) navigate('admin');
+    else navigate('home');
+  });
 }
 
 function navigate(page, addHistory=true) {
@@ -147,24 +150,28 @@ async function copyReceiptImage(contentId) {
   try {
     const canvas = await html2canvas(c, { scale: 2, backgroundColor: '#ffffff', ignoreElements: (el) => el.classList && el.classList.contains('no-capture') });
     canvas.toBlob(async (blob) => {
+      let clipboardWorked = false;
       try {
         if (navigator.clipboard && window.ClipboardItem) {
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-          showToast('✅ ছবি কপি হয়েছে! WhatsApp/Messenger-এ পেস্ট করুন');
-        } else {
-          // Fallback: download image if clipboard image API not supported
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = `রশিদ_${Date.now()}.png`;
-          a.click(); URL.revokeObjectURL(url);
-          showToast('✅ ছবি ডাউনলোড হয়েছে (কপি সাপোর্ট নেই এই ব্রাউজারে)');
+          clipboardWorked = true;
         }
       } catch (err) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `রশিদ_${Date.now()}.png`;
-        a.click(); URL.revokeObjectURL(url);
-        showToast('✅ ছবি ডাউনলোড হয়েছে');
+        clipboardWorked = false;
+      }
+      if (clipboardWorked) {
+        // কিছু মোবাইল ব্রাউজারে কপি "সফল" দেখালেও আসলে কাজ নাও করতে পারে,
+        // তাই স্পষ্ট নির্দেশনা দেওয়া হচ্ছে
+        showToast('✅ কপি হয়েছে! WhatsApp/Messenger-এ পেস্ট (Long press → Paste) করুন। না হলে নিচের ফাইল ব্যবহার করুন 👇', 4500);
+      }
+      // নির্ভরযোগ্যতার জন্য সবসময় ছবিও ডাউনলোড করে রাখা হচ্ছে —
+      // ক্লিপবোর্ড কাজ না করলেও ব্যবহারকারীর কাছে শেয়ার করার একটা নিশ্চিত উপায় থাকবে
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `রশিদ_${Date.now()}.png`;
+      a.click(); URL.revokeObjectURL(url);
+      if (!clipboardWorked) {
+        showToast('✅ ছবি ডাউনলোড হয়েছে — Gallery থেকে WhatsApp/Messenger-এ শেয়ার করুন', 4000);
       }
     }, 'image/png');
   } catch (e) {

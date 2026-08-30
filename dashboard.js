@@ -524,6 +524,7 @@ async function showAdminPanel(container) {
     </div>
     <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;flex-wrap:wrap;">
       <button class="btn-primary btn-sm" onclick="loadAdminTab('complaints')" id="atab-complaints">⚠️ অভিযোগ</button>
+      <button class="btn-secondary btn-sm" onclick="loadAdminTab('categories')" id="atab-categories">🏷️ ক্যাটাগরি</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('orders')" id="atab-orders">🖨️ প্রিন্ট</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('shop')" id="atab-shop">🛍️ বিক্রয়</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('report')" id="atab-report">📊 রিপোর্ট</button>
@@ -537,12 +538,13 @@ async function showAdminPanel(container) {
 }
 
 function loadAdminTab(tab) {
-  ['complaints','orders','shop','report','borrows','users','download'].forEach(t=>{
+  ['complaints','categories','orders','shop','report','borrows','users','download'].forEach(t=>{
     const b=document.getElementById('atab-'+t);
     if(b) b.className=t===tab?'btn-primary btn-sm':'btn-secondary btn-sm';
   });
   switch(tab){
     case 'complaints': loadAdminComplaints(); break;
+    case 'categories': loadAdminCategories(); break;
     case 'orders':     loadAdminOrders(); break;
     case 'shop':       loadAdminShopOrders(); break;
     case 'report':     loadAdminReport(); break;
@@ -550,6 +552,66 @@ function loadAdminTab(tab) {
     case 'users':      loadAdminUsers(); break;
     case 'download':   showDownloadPanel(); break;
   }
+}
+
+// ---- অ্যাডমিন: ক্যাটাগরি ম্যানেজমেন্ট ----
+// ই-বুক, উন্মুক্ত পাঠাগার, বই বিক্রয় — তিনটা ফিচারই এই একই ক্যাটাগরি তালিকা ব্যবহার করে
+async function loadAdminCategories() {
+  const el=document.getElementById('adminContent'); if(!el) return;
+  el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
+  try {
+    const doc=await db.collection(SETTINGS_COL).doc('config').get();
+    const list=(doc.exists && doc.data().categories && doc.data().categories.length)
+      ? doc.data().categories : DEFAULT_CATEGORIES;
+    const sorted=list.slice().sort((a,b)=>a.localeCompare(b,'bn'));
+    el.innerHTML=`
+      <div class="card" style="margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--primary-dark);margin-bottom:10px;">🏷️ ক্যাটাগরি ব্যবস্থাপনা</div>
+        <p class="text-sm text-muted" style="margin-bottom:12px;">এখানে যা যোগ/মুছবেন তা ই-বুক, উন্মুক্ত পাঠাগার ও বই বিক্রয় — তিন ফিচারেই সাথে সাথে দেখাবে।</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <input type="text" id="newCatInput" placeholder="নতুন ক্যাটাগরির নাম" style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font-main);font-size:14px;">
+          <button class="btn-primary btn-sm" onclick="addAdminCategory()">+ যোগ</button>
+        </div>
+        <div id="catListArea" style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${sorted.map(c=>`
+            <span style="display:inline-flex;align-items:center;gap:6px;background:#f0f9f4;border:1px solid var(--border);border-radius:20px;padding:5px 8px 5px 12px;font-size:13px;">
+              ${c}
+              <button onclick="deleteAdminCategory('${escHtml(c)}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 4px;">✕</button>
+            </span>`).join('')}
+        </div>
+      </div>`;
+  } catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`;}
+}
+
+async function addAdminCategory() {
+  const input=document.getElementById('newCatInput');
+  const name=input.value.trim();
+  if(!name) return showToast('ক্যাটাগরির নাম লিখুন');
+  try {
+    const doc=await db.collection(SETTINGS_COL).doc('config').get();
+    const list=(doc.exists && doc.data().categories && doc.data().categories.length)
+      ? doc.data().categories : DEFAULT_CATEGORIES.slice();
+    if(list.includes(name)) { showToast('এই ক্যাটাগরি আগে থেকেই আছে'); return; }
+    list.push(name);
+    await db.collection(SETTINGS_COL).doc('config').set({categories:list},{merge:true});
+    await loadCategoriesFromDB(); // গ্লোবাল CATEGORIES রিফ্রেশ
+    showToast('✅ ক্যাটাগরি যোগ হয়েছে!');
+    loadAdminCategories();
+  } catch(e){showToast('সমস্যা: '+e.message);}
+}
+
+async function deleteAdminCategory(name) {
+  if(!confirm(`"${name}" ক্যাটাগরিটি মুছে ফেলবেন?`)) return;
+  try {
+    const doc=await db.collection(SETTINGS_COL).doc('config').get();
+    let list=(doc.exists && doc.data().categories && doc.data().categories.length)
+      ? doc.data().categories : DEFAULT_CATEGORIES.slice();
+    list=list.filter(c=>c!==name);
+    await db.collection(SETTINGS_COL).doc('config').set({categories:list},{merge:true});
+    await loadCategoriesFromDB();
+    showToast('✅ মুছে ফেলা হয়েছে');
+    loadAdminCategories();
+  } catch(e){showToast('সমস্যা: '+e.message);}
 }
 
 async function saveSettings() {

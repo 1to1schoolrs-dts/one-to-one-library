@@ -1,5 +1,25 @@
 const SHOP_COL='bookshop',SHOP_ORDERS_COL='shop_orders',LIBRARIES_COL='libraries',BARGAINS_COL='bargains';
 let shopCurrentCat='সব ক্যাটাগরি',shopView='books',shopCart={},userLibrary=null;
+let shopFilterAuthor=null, shopFilterLibId=null; // ক্লিকযোগ্য লেখক/লাইব্রেরি ট্যাগের জন্য
+
+function filterShopByAuthor(authorName) {
+  shopFilterAuthor=authorName; shopFilterLibId=null;
+  const s=document.getElementById('shopSearch'); if(s) s.value=authorName;
+  loadShopBooks();
+  showToast(`✍️ "${authorName}" এর সব বই`);
+}
+function filterShopByLibrary(libId, libName) {
+  shopFilterLibId=libId; shopFilterAuthor=null;
+  const s=document.getElementById('shopSearch'); if(s) s.value='';
+  switchShopView('books');
+  loadShopBooks(libId);
+  showToast(`🏪 "${libName}" এর সব বই`);
+}
+function clearShopFilter() {
+  shopFilterAuthor=null; shopFilterLibId=null;
+  const s=document.getElementById('shopSearch'); if(s) s.value='';
+  loadShopBooks();
+}
 
 async function renderBookshop(container){
   await checkUserLibrary();
@@ -19,6 +39,7 @@ async function renderBookshop(container){
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="shopCatChips">
       ${CATEGORIES.map(c=>`<button class="cat-chip ${c==='সব ক্যাটাগরি'?'cat-chip-active':''}" onclick="shopSelectCat('${c}')" id="shopcat-${c}">${c}</button>`).join('')}
     </div>
+    ${demandButtonsHTML('bookshop')}
     <div class="search-bar"><span>🔍</span>
       <input type="text" id="shopSearch" placeholder="বই, লেখক বা লাইব্রেরি..." oninput="loadShopBooks()">
     </div>
@@ -55,8 +76,13 @@ async function loadShopBooks(filterLibId=null){
     if(shopCurrentCat!=='সব ক্যাটাগরি')books=books.filter(b=>b.category===shopCurrentCat);
     if(search)books=books.filter(b=>b.title?.toLowerCase().includes(search)||b.author?.toLowerCase().includes(search)||b.libraryName?.toLowerCase().includes(search));
     books.sort((a,b)=>shopLocScore(b)-shopLocScore(a));
-    if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><p>কোনো বই পাওয়া যায়নি</p></div>`;return;}
-    el.innerHTML=books.map(b=>{
+    if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><p>কোনো বই পাওয়া যায়নি</p><button class="btn-secondary btn-sm" style="margin-top:10px;" onclick="clearShopFilter()">সব দেখুন</button></div>`;return;}
+    const filterBanner = (shopFilterAuthor||shopFilterLibId)
+      ? `<div style="background:#e8f4fd;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+          <span>${shopFilterLibId?`🏪 ${books[0]?.libraryName||''} এর বই`:`✍️ ${shopFilterAuthor} এর বই`}</span>
+          <button onclick="clearShopFilter()" style="background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;">✕ ফিল্টার সরান</button>
+        </div>` : '';
+    el.innerHTML=filterBanner+books.map(b=>{
       const isMine=b.sellerPhone===currentUser.phone;
       const near=shopLocScore(b)>0&&!isMine;
       const pct=b.printPrice&&b.salePrice?Math.round((1-b.salePrice/b.printPrice)*100):0;
@@ -66,10 +92,10 @@ async function loadShopBooks(filterLibId=null){
           ${b.bargainable?`<span class="badge badge-yellow">💬 বারগেইন</span>`:`<span class="badge badge-blue">Fixed</span>`}
         </div>
         <div class="book-card-meta">
-          ${b.author?`<span>✍️ ${b.author}</span>`:''}
+          ${b.author?`<button class="tag-btn" onclick="filterShopByAuthor('${escHtml(b.author)}')">✍️ ${b.author}</button>`:''}
           ${b.publisher?`<span>🏢 ${b.publisher}</span>`:''}
-          ${b.category?`<span class="tag">${b.category}</span>`:''}
-          <span>🏪 ${b.libraryName}</span>
+          ${b.category?`<button class="tag-btn" onclick="shopSelectCat('${b.category}')">${b.category}</button>`:''}
+          <button class="tag-btn" onclick="filterShopByLibrary('${b.libraryId}','${escHtml(b.libraryName)}')">🏪 ${b.libraryName}</button>
           <span>📍 ${b.libraryUpazila||''}, ${b.libraryDistrict||''}</span>
           ${near?`<span class="badge badge-green">📍 কাছাকাছি</span>`:''}
         </div>

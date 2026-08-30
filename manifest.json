@@ -1,7 +1,7 @@
 {
-  "name": "পাঠশালা লাইব্রেরি",
-  "short_name": "পাঠশালা",
-  "description": "অনলাইন লাইব্রেরি",
+  "name": "ওয়ান টু ওয়ান লাইব্রেরি",
+  "short_name": "1to1 Lib",
+  "description": "ওয়ান টু ওয়ান অনলাইন লাইব্রেরি",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1a3a2a",

@@ -19,7 +19,7 @@ async function renderHome(container) {
         </div>
         <div class="feature-card accent" onclick="navigate('personal')">
           <div class="f-icon">🏡</div>
-          <div class="f-title">ব্যক্তিগত লাইব্রেরি</div>
+          <div class="f-title">উন্মুক্ত পাঠাগার</div>
           <span class="borrow-label">📦 হার্ড কপি ধার দিন / নিন</span>
         </div>
         <div class="feature-card" onclick="navigate('dashboard')">

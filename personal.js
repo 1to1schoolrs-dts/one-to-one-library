@@ -1,25 +1,55 @@
 // ============================================
-// PERSONAL LIBRARY — পূর্ণ সংস্করণ
+// উন্মুক্ত পাঠাগার (পূর্বে: ব্যক্তিগত লাইব্রেরি)
+// CATEGORIES গ্লোবাল ভ্যারিয়েবল — firebase-config.js এ লোড হয়, অ্যাডমিন এডিট করতে পারবেন
 // ============================================
-const CATEGORIES = [
-  'সব ক্যাটাগরি','আকিদা','আত্মউন্নয়ন','অর্থনীতি','একাডেমিক',
-  'কুরআন','চিকিৎসা','জীবনী','তথ্য-প্রযুক্তি','তাফসির',
-  'দর্শন','নারী','ফিকহ','বিজ্ঞান','রাজনীতি',
-  'সাহিত্য','সিরাত','হাদীস','ইতিহাস','উসুল',
-  'ভ্রমণ','শিশু-কিশোর','অন্যান্য'
-];
 let perCurrentCat='সব ক্যাটাগরি';
+const MIN_BOOKS_TO_BORROW = 3; // আগে ৫ ছিল
+let perFilterOwnerPhone = null; // ক্লিকযোগ্য "মালিক" ট্যাগ
+let perFilterUpazila = null;    // ক্লিকযোগ্য "এলাকা" ট্যাগ
+
+function filterPerByAuthor(authorName) {
+  perFilterOwnerPhone = null; perFilterUpazila = null;
+  const searchInput=document.getElementById('perSearch');
+  if(searchInput) searchInput.value=authorName;
+  loadPersonalBooks(authorName);
+  showToast(`✍️ "${authorName}" এর সব বই`);
+}
+
+function filterPerByOwner(ownerPhone, ownerName) {
+  perFilterOwnerPhone = ownerPhone; perFilterUpazila = null;
+  const searchInput=document.getElementById('perSearch');
+  if(searchInput) searchInput.value='';
+  loadPersonalBooks('');
+  showToast(`👤 "${ownerName}" এর সব বই`);
+}
+
+function filterPerByUpazila(upazila) {
+  if (!upazila) return;
+  perFilterUpazila = upazila; perFilterOwnerPhone = null;
+  const searchInput=document.getElementById('perSearch');
+  if(searchInput) searchInput.value='';
+  loadPersonalBooks('');
+  showToast(`📍 "${upazila}" এলাকার সব বই`);
+}
+
+function clearPerFilter() {
+  perFilterOwnerPhone = null; perFilterUpazila = null;
+  const searchInput=document.getElementById('perSearch');
+  if(searchInput) searchInput.value='';
+  loadPersonalBooks('');
+}
 
 async function renderPersonal(container) {
   container.innerHTML=`<div class="page">
     <div class="section-header">
-      <span class="section-title">🏡 ব্যক্তিগত লাইব্রেরি</span>
+      <span class="section-title">🏡 উন্মুক্ত পাঠাগার</span>
       <button class="btn-accent btn-sm" onclick="showAddPersonalBook()">+ বই যোগ</button>
     </div>
     <div id="myBookCount" style="margin-bottom:10px;"></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="perCatChips">
       ${CATEGORIES.map(c=>`<button class="cat-chip ${c==='সব ক্যাটাগরি'?'cat-chip-active':''}" onclick="filterPerCat('${c}')" id="percat-${c}">${c}</button>`).join('')}
     </div>
+    ${demandButtonsHTML('personal')}
     <div class="search-bar"><span>🔍</span>
       <input type="text" id="perSearch" placeholder="বই বা মালিকের নাম..." oninput="loadPersonalBooks(this.value)">
     </div>
@@ -42,11 +72,11 @@ async function loadMyBookCount() {
     const snap=await db.collection(PERSONAL_COL).where('ownerPhone','==',currentUser.phone).get();
     const count=snap.size;
     const el=document.getElementById('myBookCount'); if(!el) return;
-    if(count<5) {
+    if(count<MIN_BOOKS_TO_BORROW) {
       el.innerHTML=`<div style="background:#fff3cd;border-radius:8px;padding:10px 12px;font-size:13px;color:#856404;">
-        📚 আপনি <b>${count}টি</b> বই যোগ করেছেন। ধার চাইতে <b>৫টি</b> দরকার।
+        📚 আপনি <b>${count}টি</b> বই যোগ করেছেন। ধার চাইতে <b>${MIN_BOOKS_TO_BORROW}টি</b> দরকার।
         <div style="background:#e0d8cc;height:6px;border-radius:4px;margin-top:8px;">
-          <div style="background:var(--primary);height:6px;border-radius:4px;width:${Math.min(count/5*100,100)}%;"></div>
+          <div style="background:var(--primary);height:6px;border-radius:4px;width:${Math.min(count/MIN_BOOKS_TO_BORROW*100,100)}%;"></div>
         </div>
       </div>`;
     } else {
@@ -70,26 +100,36 @@ async function loadPersonalBooks(search='') {
     let books=snap.docs.map(d=>({id:d.id,...d.data()}));
     books.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
     if(perCurrentCat!=='সব ক্যাটাগরি') books=books.filter(b=>b.category===perCurrentCat);
-    if(search){const s=search.toLowerCase();books=books.filter(b=>b.title?.toLowerCase().includes(s)||b.ownerName?.toLowerCase().includes(s));}
+    if(search){const s=search.toLowerCase();books=books.filter(b=>b.title?.toLowerCase().includes(s)||b.ownerName?.toLowerCase().includes(s)||b.author?.toLowerCase().includes(s));}
+    if(perFilterOwnerPhone) books=books.filter(b=>b.ownerPhone===perFilterOwnerPhone);
+    if(perFilterUpazila) books=books.filter(b=>b.ownerUpazila===perFilterUpazila);
     books.sort((a,b)=>locationScore(b)-locationScore(a));
-    if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">🏡</div><p>কোনো বই নেই</p></div>`;return;}
-    el.innerHTML=books.map(b=>{
+    if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">🏡</div><p>কোনো বই নেই</p><button class="btn-secondary btn-sm" style="margin-top:10px;" onclick="clearPerFilter()">সব দেখুন</button></div>`;return;}
+    const filterBanner = (perFilterOwnerPhone||perFilterUpazila)
+      ? `<div style="background:#e8f4fd;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+          <span>${perFilterOwnerPhone?`👤 ${books[0]?.ownerName||''} এর বই`:`📍 ${perFilterUpazila} এলাকার বই`}</span>
+          <button onclick="clearPerFilter()" style="background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;">✕ ফিল্টার সরান</button>
+        </div>` : '';
+    el.innerHTML=filterBanner+books.map(b=>{
       const isMine=b.ownerPhone===currentUser.phone;
       const near=locationScore(b)>0&&!isMine;
+      // লিঙ্গ নিয়ম: প্রতিষ্ঠান হলে সবাই ধার নিতে পারবে; নাহলে একই লিঙ্গ হতে হবে
+      const genderOk = b.ownerGender==='institution' || currentUser.gender==='institution' || (b.ownerGender && currentUser.gender && b.ownerGender===currentUser.gender);
       return `<div class="book-card">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
           <div class="book-card-title">📕 ${b.title}</div>
           <span class="badge ${b.available!==false?'badge-green':'badge-red'}">${b.available!==false?'আছে':'ধার দেওয়া'}</span>
         </div>
         <div class="book-card-meta">
-          ${b.author?`<span>✍️ ${b.author}</span>`:''}
-          ${b.category?`<span class="tag">${b.category}</span>`:''}
-          <span>👤 ${b.ownerName}</span>
-          <span>📍 ${b.ownerVillage||''}, ${b.ownerUpazila||''}</span>
+          ${b.author?`<button class="tag-btn" onclick="filterPerByAuthor('${escHtml(b.author)}')">✍️ ${b.author}</button>`:''}
+          ${b.category?`<button class="tag-btn" onclick="filterPerCat('${b.category}')">${b.category}</button>`:''}
+          <button class="tag-btn" onclick="filterPerByOwner('${b.ownerPhone}','${escHtml(b.ownerName)}')">👤 ${b.ownerName}</button>
+          <button class="tag-btn" onclick="filterPerByUpazila('${escHtml(b.ownerUpazila||'')}')">📍 ${b.ownerVillage||''}, ${b.ownerUpazila||''}</button>
           ${near?`<span class="badge badge-green">📍 কাছাকাছি</span>`:''}
         </div>
         <div class="book-card-actions">
-          ${!isMine&&b.available!==false?`<button class="btn-primary btn-sm" onclick="checkBorrowEligibility('${b.id}','${escHtml(b.title)}','${b.ownerPhone}','${escHtml(b.ownerName)}')">📚 ধার চাই</button>`:''}
+          ${!isMine&&b.available!==false&&genderOk?`<button class="btn-primary btn-sm" onclick="checkBorrowEligibility('${b.id}','${escHtml(b.title)}','${b.ownerPhone}','${escHtml(b.ownerName)}')">📚 ধার চাই</button>`:''}
+          ${!isMine&&b.available!==false&&!genderOk?`<span class="text-sm text-muted">🔒 এই বই ধার নেওয়া যাবে না</span>`:''}
           ${isMine?`<button class="btn-secondary btn-sm" onclick="showMyBookDetail('${b.id}')">⚙️ পরিচালনা</button>`:''}
         </div>
       </div>`;
@@ -100,18 +140,18 @@ async function loadPersonalBooks(search='') {
 async function checkBorrowEligibility(bookId,bookTitle,ownerPhone,ownerName) {
   try {
     const snap=await db.collection(PERSONAL_COL).where('ownerPhone','==',currentUser.phone).get();
-    if(snap.size<5) {
+    if(snap.size<MIN_BOOKS_TO_BORROW) {
       showModal(`
         <span class="modal-close" onclick="closeModal()">✕</span>
         <div class="modal-title">📚 আগে বই যোগ করুন</div>
         <div style="text-align:center;padding:16px 0;">
           <div style="font-size:48px;margin-bottom:12px;">📖</div>
           <p style="font-weight:600;color:var(--primary-dark);">ধার চাইতে নিজের বই যোগ করুন</p>
-          <p style="font-size:13px;color:var(--text-muted);margin:8px 0 16px;">আপনি <b>${snap.size}টি</b> বই যোগ করেছেন।<br>কমপক্ষে <b>৫টি</b> দরকার।</p>
+          <p style="font-size:13px;color:var(--text-muted);margin:8px 0 16px;">আপনি <b>${snap.size}টি</b> বই যোগ করেছেন।<br>কমপক্ষে <b>${MIN_BOOKS_TO_BORROW}টি</b> দরকার।</p>
           <div style="background:#f5f0e8;border-radius:8px;padding:10px;margin-bottom:16px;">
-            <div style="font-size:13px;color:var(--text-muted);">অগ্রগতি: ${snap.size}/৫</div>
+            <div style="font-size:13px;color:var(--text-muted);">অগ্রগতি: ${snap.size}/${MIN_BOOKS_TO_BORROW}</div>
             <div style="background:#e0d8cc;height:8px;border-radius:4px;margin-top:6px;">
-              <div style="background:var(--primary);height:8px;border-radius:4px;width:${Math.min(snap.size/5*100,100)}%;"></div>
+              <div style="background:var(--primary);height:8px;border-radius:4px;width:${Math.min(snap.size/MIN_BOOKS_TO_BORROW*100,100)}%;"></div>
             </div>
           </div>
         </div>
@@ -148,12 +188,13 @@ function showAddPersonalBook() {
 async function submitPersonalBook() {
   const title=document.getElementById('perTitle').value.trim();
   if(!title) return showToast('বইয়ের নাম দিন');
+  if(!currentUser.gender) return showToast('আগে প্রোফাইলে "আপনি কি?" সিলেক্ট করুন');
   try {
     await db.collection(PERSONAL_COL).add({
       title,author:document.getElementById('perAuthor').value.trim(),
       category:document.getElementById('perCategory').value,
       description:document.getElementById('perDesc').value.trim(),
-      ownerPhone:currentUser.phone,ownerName:currentUser.name,
+      ownerPhone:currentUser.phone,ownerName:currentUser.name,ownerGender:currentUser.gender,
       ownerVillage:currentUser.village||'',ownerUpazila:currentUser.upazila||'',ownerDistrict:currentUser.district||'',
       available:true,createdAt:new Date().toISOString()
     });

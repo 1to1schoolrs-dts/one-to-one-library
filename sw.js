@@ -1,6 +1,6 @@
-const CACHE_NAME = 'one-to-one-lib-v13';
+const CACHE_NAME = 'one-to-one-lib-v15';
 const ASSETS = ['./', './index.html', './style.css',
-  './firebase-config.js', './auth.js', './notifications.js', './app.js',
+  './firebase-config.js', './auth.js', './notifications.js', './demands.js', './app.js',
   './home.js', './ebook.js', './bookshop.js',
   './personal.js', './dashboard.js', './manifest.json'];
 self.addEventListener('install',e=>{

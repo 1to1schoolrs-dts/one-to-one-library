@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#1a3a2a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="ওয়ান টু ওয়ান লাইব্রেরি">
+  <meta name="apple-mobile-web-app-title" content="1to1 Lib">
   <title>ওয়ান টু ওয়ান লাইব্রেরি</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -36,6 +36,15 @@
     </div>
     <div id="registerFields" style="display:none;">
       <div class="input-group"><label>আপনার নাম *</label><input type="text" id="regName" placeholder="পূর্ণ নাম লিখুন"></div>
+      <div class="input-group"><label>আপনি কি? *</label>
+        <select id="regGender">
+          <option value="">সিলেক্ট করুন</option>
+          <option value="male">পুরুষ</option>
+          <option value="female">নারী</option>
+          <option value="institution">প্রতিষ্ঠান</option>
+        </select>
+        <div class="text-sm text-muted" style="margin-top:4px;">শুধু বই ধার দেওয়া-নেওয়ার ক্ষেত্রে ব্যবহৃত হবে</div>
+      </div>
       <div class="input-group"><label>গ্রাম / এলাকা *</label><input type="text" id="regVillage" placeholder="গ্রাম বা এলাকার নাম"></div>
       <div class="input-group"><label>উপজেলা *</label><input type="text" id="regUpazila" placeholder="উপজেলার নাম"></div>
       <div class="input-group"><label>জেলা *</label><input type="text" id="regDistrict" placeholder="জেলার নাম"></div>
@@ -72,7 +81,7 @@
       <span class="nav-icon">🛍️</span><span class="nav-label">বই কিনুন</span>
     </button>
     <button class="nav-btn" id="nav-personal" onclick="navigate('personal')">
-      <span class="nav-icon">🏡</span><span class="nav-label">ব্যক্তিগত</span>
+      <span class="nav-icon">🏡</span><span class="nav-label">পাঠাগার</span>
     </button>
     <button class="nav-btn" id="nav-dashboard" onclick="navigate('dashboard')">
       <span class="nav-icon">📊</span><span class="nav-label">ড্যাশবোর্ড</span>
@@ -92,6 +101,7 @@
 <script src="firebase-config.js"></script>
 <script src="auth.js"></script>
 <script src="notifications.js"></script>
+<script src="demands.js"></script>
 <script src="home.js"></script>
 <script src="ebook.js"></script>
 <script src="bookshop.js"></script>

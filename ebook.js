@@ -2,6 +2,7 @@
 // E-BOOK FEATURE
 // ============================================
 let ebCurrentCat = 'সব ক্যাটাগরি';
+let ebFilterUploaderPhone = null; // ক্লিকযোগ্য "আপলোডকারী" ট্যাগের জন্য
 
 async function renderEbook(container) {
   container.innerHTML = `
@@ -13,6 +14,7 @@ async function renderEbook(container) {
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="ebCatChips">
         ${CATEGORIES.map(c=>`<button class="cat-chip ${c==='সব ক্যাটাগরি'?'cat-chip-active':''}" onclick="filterEbCat('${c}')" id="ebcat-${c}">${c}</button>`).join('')}
       </div>
+      ${demandButtonsHTML('ebook')}
       <div class="search-bar"><span>🔍</span>
         <input type="text" id="ebookSearch" placeholder="বইয়ের নাম বা লেখক..." oninput="loadEbooks()">
       </div>
@@ -29,6 +31,42 @@ function filterEbCat(cat) {
   loadEbooks();
 }
 
+// লেখকের নামে ক্লিক করলে সেই লেখকের সব বই দেখাবে
+function filterEbookByAuthor(authorName) {
+  ebCurrentCat = 'সব ক্যাটাগরি';
+  document.querySelectorAll('#ebCatChips .cat-chip').forEach(c=>c.classList.remove('cat-chip-active'));
+  const el=document.getElementById('ebcat-সব ক্যাটাগরি');
+  if(el) el.classList.add('cat-chip-active');
+  const searchInput=document.getElementById('ebookSearch');
+  if(searchInput) searchInput.value=authorName;
+  loadEbooks();
+  showToast(`✍️ "${authorName}" এর সব বই`);
+}
+
+// আপলোডকারীর নামে ক্লিক করলে তার সব বই দেখাবে
+function filterEbookByUploader(uploaderPhone, uploaderName) {
+  ebCurrentCat = 'সব ক্যাটাগরি';
+  document.querySelectorAll('#ebCatChips .cat-chip').forEach(c=>c.classList.remove('cat-chip-active'));
+  const el=document.getElementById('ebcat-সব ক্যাটাগরি');
+  if(el) el.classList.add('cat-chip-active');
+  ebFilterUploaderPhone = uploaderPhone;
+  const searchInput=document.getElementById('ebookSearch');
+  if(searchInput) searchInput.value='';
+  loadEbooks();
+  showToast(`👤 "${uploaderName}" এর সব বই`);
+}
+
+function clearEbookFilter() {
+  ebFilterUploaderPhone = null;
+  const searchInput=document.getElementById('ebookSearch');
+  if(searchInput) searchInput.value='';
+  ebCurrentCat='সব ক্যাটাগরি';
+  document.querySelectorAll('#ebCatChips .cat-chip').forEach(c=>c.classList.remove('cat-chip-active'));
+  const el=document.getElementById('ebcat-সব ক্যাটাগরি');
+  if(el) el.classList.add('cat-chip-active');
+  loadEbooks();
+}
+
 async function loadEbooks() {
   const el=document.getElementById('ebookList');
   if(!el) return;
@@ -38,15 +76,21 @@ async function loadEbooks() {
     let books=snap.docs.map(d=>({id:d.id,...d.data()}));
     books.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
     if(ebCurrentCat!=='সব ক্যাটাগরি') books=books.filter(b=>b.category===ebCurrentCat);
-    if(search) books=books.filter(b=>b.title?.toLowerCase().includes(search)||b.author?.toLowerCase().includes(search));
-    if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><p>কোনো বই নেই</p></div>`;return;}
-    el.innerHTML=books.map(b=>`
+    if(ebFilterUploaderPhone) books=books.filter(b=>b.uploaderPhone===ebFilterUploaderPhone);
+    if(search) books=books.filter(b=>b.title?.toLowerCase().includes(search)||b.author?.toLowerCase().includes(search)||b.uploaderName?.toLowerCase().includes(search));
+    if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><p>কোনো বই নেই</p><button class="btn-secondary btn-sm" style="margin-top:10px;" onclick="clearEbookFilter()">সব দেখুন</button></div>`;return;}
+    const filterBanner = ebFilterUploaderPhone
+      ? `<div style="background:#e8f4fd;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+          <span>👤 ${books[0]?.uploaderName||''} এর বই দেখাচ্ছে</span>
+          <button onclick="clearEbookFilter()" style="background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;">✕ ফিল্টার সরান</button>
+        </div>` : '';
+    el.innerHTML=filterBanner+books.map(b=>`
       <div class="book-card">
         <div class="book-card-title">📖 ${b.title}</div>
         <div class="book-card-meta">
-          ${b.author?`<span>✍️ ${b.author}</span>`:''}
-          ${b.category?`<span class="tag">${b.category}</span>`:''}
-          <span>👤 ${b.uploaderName||''}</span>
+          ${b.author?`<button class="tag-btn" onclick="filterEbookByAuthor('${escHtml(b.author)}')">✍️ ${b.author}</button>`:''}
+          ${b.category?`<button class="tag-btn" onclick="filterEbCat('${b.category}')">${b.category}</button>`:''}
+          ${b.uploaderName?`<button class="tag-btn" onclick="filterEbookByUploader('${b.uploaderPhone}','${escHtml(b.uploaderName)}')">👤 ${b.uploaderName}</button>`:''}
           <span>🕐 ${timeAgo(b.createdAt)}</span>
         </div>
         ${b.description?`<div class="text-sm text-muted">${b.description}</div>`:''}

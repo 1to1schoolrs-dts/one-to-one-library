@@ -412,3 +412,14 @@ html, body {
   padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;
   animation:pulseBright 2s infinite;
 }
+
+/* ---- ক্লিকযোগ্য ট্যাগ (লেখক, ক্যাটাগরি, মালিক, এলাকা) ---- */
+.tag-btn {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 9px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 20px; font-size: 12px; color: var(--primary);
+  font-family: var(--font-main); font-weight: 500;
+  cursor: pointer; transition: all .15s;
+}
+.tag-btn:active { background: var(--primary); color: #fff; transform: scale(0.96); }
