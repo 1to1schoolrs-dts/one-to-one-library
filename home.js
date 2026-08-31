@@ -29,13 +29,8 @@ async function renderHome(container) {
         </div>
       </div>
       <div id="homeStats"></div>
-      <div class="card">
-        <div class="card-title">📢 সাম্প্রতিক ই-বুক</div>
-        <div id="recentBooks"><div class="text-muted text-sm">লোড হচ্ছে...</div></div>
-      </div>
     </div>`;
   loadHomeStats();
-  loadRecentBooks();
 }
 
 async function loadHomeStats() {
@@ -51,19 +46,5 @@ async function loadHomeStats() {
       <div class="stat-box"><div class="stat-num">${personal.size}</div><div class="stat-lbl">ব্যক্তিগত বই</div></div>
       <div class="stat-box"><div class="stat-num">${shop.size}</div><div class="stat-lbl">বিক্রয়ের বই</div></div>
     </div>`;
-  } catch(e){}
-}
-
-async function loadRecentBooks() {
-  try {
-    const snap=await db.collection(EBOOKS_COL).get();
-    const el=document.getElementById('recentBooks');if(!el)return;
-    const books=snap.docs.map(d=>d.data()).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,3);
-    if(!books.length){el.innerHTML=`<div class="empty-state"><p>এখনো কোনো বই নেই</p></div>`;return;}
-    el.innerHTML=books.map(b=>`<div class="list-item">
-      <div><div style="font-weight:600;font-size:14px;">${b.title}</div>
-      <div class="text-muted text-sm">${b.author||''} · ${timeAgo(b.createdAt)}</div></div>
-      <button class="btn-secondary btn-sm" onclick="navigate('ebook')">দেখুন</button>
-    </div>`).join('');
   } catch(e){}
 }

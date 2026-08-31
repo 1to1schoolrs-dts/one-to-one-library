@@ -97,6 +97,39 @@ function copyToClipboard(text) {
 }
 
 // ============================================
+// ফাজি সার্চ — এক্সাক্ট ম্যাচ আগে, কাছাকাছি/ভুল বানানও পাওয়া যাবে
+// ============================================
+function normalizeSearchText(s) {
+  return (s||'').toLowerCase().replace(/\s+/g,'').trim();
+}
+
+// text-এর মধ্যে query কতটা মেলে তার স্কোর — 0 মানে না মেলা, বেশি স্কোর মানে বেশি প্রাসঙ্গিক
+function fuzzyScore(text, query) {
+  const t = normalizeSearchText(text);
+  const q = normalizeSearchText(query);
+  if (!q) return 0;
+  if (!t) return 0;
+  if (t === q) return 100;           // পুরোপুরি মিলে গেলে
+  if (t.startsWith(q)) return 80;    // শুরুতে মিলে
+  if (t.includes(q)) return 60;      // মাঝে কোথাও মিলে
+  // ভুল বানান/কাছাকাছি — কমন অক্ষরের অনুপাত মাপা হচ্ছে
+  let common = 0;
+  const tChars = t.split('');
+  const qChars = q.split('');
+  qChars.forEach(ch => {
+    const idx = tChars.indexOf(ch);
+    if (idx !== -1) { common++; tChars.splice(idx,1); }
+  });
+  const ratio = common / Math.max(q.length, 1);
+  return ratio >= 0.6 ? Math.round(ratio*40) : 0; // যথেষ্ট কাছাকাছি হলেই দেখাবে
+}
+
+// একাধিক ফিল্ড জুড়ে সর্বোচ্চ স্কোর বের করা — যেমন title, author, uploaderName
+function fuzzyScoreFields(fields, query) {
+  return Math.max(0, ...fields.map(f=>fuzzyScore(f, query)));
+}
+
+// ============================================
 // রশিদের জন্য প্রিন্ট / PDF / ছবি কপি বাটন
 // contentId: রশিদের HTML যে div-এ আছে তার id
 // ============================================

@@ -99,11 +99,27 @@ async function loadPersonalBooks(search='') {
     const snap=await db.collection(PERSONAL_COL).get();
     let books=snap.docs.map(d=>({id:d.id,...d.data()}));
     books.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+    // পুরনো বইয়ে ownerGender সেভ নাও থাকতে পারে (ফিচার চালুর আগে যোগ করা)।
+    // তাই মালিকের বর্তমান প্রোফাইল থেকে লাইভ লিঙ্গ চেক করা হচ্ছে — সবসময় নির্ভুল থাকবে
+    const ownerPhones=[...new Set(books.map(b=>b.ownerPhone))];
+    const genderMap={};
+    try {
+      const usersSnap=await db.collection(USERS_COL).get();
+      usersSnap.docs.forEach(d=>{ genderMap[d.id]=d.data().gender; });
+    } catch(e){}
+
     if(perCurrentCat!=='সব ক্যাটাগরি') books=books.filter(b=>b.category===perCurrentCat);
-    if(search){const s=search.toLowerCase();books=books.filter(b=>b.title?.toLowerCase().includes(s)||b.ownerName?.toLowerCase().includes(s)||b.author?.toLowerCase().includes(s));}
+    if(search){
+      books = books.map(b=>({...b, _score: fuzzyScoreFields([b.title,b.ownerName,b.author], search)}))
+        .filter(b=>b._score>0)
+        .sort((a,b)=>b._score-a._score);
+    }
     if(perFilterOwnerPhone) books=books.filter(b=>b.ownerPhone===perFilterOwnerPhone);
     if(perFilterUpazila) books=books.filter(b=>b.ownerUpazila===perFilterUpazila);
-    books.sort((a,b)=>locationScore(b)-locationScore(a));
+    // সার্চ থাকলে প্রাসঙ্গিকতা (fuzzy score) অগ্রাধিকার পাবে, তারপর কাছের এলাকা
+    if (search) books.sort((a,b)=>(b._score-a._score)||(locationScore(b)-locationScore(a)));
+    else books.sort((a,b)=>locationScore(b)-locationScore(a));
     if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">🏡</div><p>কোনো বই নেই</p><button class="btn-secondary btn-sm" style="margin-top:10px;" onclick="clearPerFilter()">সব দেখুন</button></div>`;return;}
     const filterBanner = (perFilterOwnerPhone||perFilterUpazila)
       ? `<div style="background:#e8f4fd;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
@@ -114,7 +130,10 @@ async function loadPersonalBooks(search='') {
       const isMine=b.ownerPhone===currentUser.phone;
       const near=locationScore(b)>0&&!isMine;
       // লিঙ্গ নিয়ম: প্রতিষ্ঠান হলে সবাই ধার নিতে পারবে; নাহলে একই লিঙ্গ হতে হবে
-      const genderOk = b.ownerGender==='institution' || currentUser.gender==='institution' || (b.ownerGender && currentUser.gender && b.ownerGender===currentUser.gender);
+      // মালিকের গ্রন্থাগারের bookর সেভ করা ownerGender এর বদলে বর্তমান প্রোফাইলের gender ব্যবহার হচ্ছে
+      const liveOwnerGender = genderMap[b.ownerPhone] || b.ownerGender;
+      const genderOk = liveOwnerGender==='institution' || currentUser.gender==='institution' || (liveOwnerGender && currentUser.gender && liveOwnerGender===currentUser.gender);
+      const genderUnknown = !liveOwnerGender || !currentUser.gender;
       return `<div class="book-card">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
           <div class="book-card-title">📕 ${b.title}</div>
@@ -129,7 +148,8 @@ async function loadPersonalBooks(search='') {
         </div>
         <div class="book-card-actions">
           ${!isMine&&b.available!==false&&genderOk?`<button class="btn-primary btn-sm" onclick="checkBorrowEligibility('${b.id}','${escHtml(b.title)}','${b.ownerPhone}','${escHtml(b.ownerName)}')">📚 ধার চাই</button>`:''}
-          ${!isMine&&b.available!==false&&!genderOk?`<span class="text-sm text-muted">🔒 এই বই ধার নেওয়া যাবে না</span>`:''}
+          ${!isMine&&b.available!==false&&!genderOk&&!genderUnknown?`<span class="text-sm text-muted">🔒 এই বই ধার নেওয়া যাবে না</span>`:''}
+          ${!isMine&&b.available!==false&&genderUnknown&&!currentUser.gender?`<button class="btn-secondary btn-sm" onclick="showProfile()">⚠️ আগে প্রোফাইলে লিঙ্গ সেট করুন</button>`:''}
           ${isMine?`<button class="btn-secondary btn-sm" onclick="showMyBookDetail('${b.id}')">⚙️ পরিচালনা</button>`:''}
         </div>
       </div>`;

@@ -77,7 +77,11 @@ async function loadEbooks() {
     books.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
     if(ebCurrentCat!=='সব ক্যাটাগরি') books=books.filter(b=>b.category===ebCurrentCat);
     if(ebFilterUploaderPhone) books=books.filter(b=>b.uploaderPhone===ebFilterUploaderPhone);
-    if(search) books=books.filter(b=>b.title?.toLowerCase().includes(search)||b.author?.toLowerCase().includes(search)||b.uploaderName?.toLowerCase().includes(search));
+    if(search) {
+      books = books.map(b=>({...b, _score: fuzzyScoreFields([b.title,b.author,b.uploaderName], search)}))
+        .filter(b=>b._score>0)
+        .sort((a,b)=>b._score-a._score);
+    }
     if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><p>কোনো বই নেই</p><button class="btn-secondary btn-sm" style="margin-top:10px;" onclick="clearEbookFilter()">সব দেখুন</button></div>`;return;}
     const filterBanner = ebFilterUploaderPhone
       ? `<div style="background:#e8f4fd;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
@@ -93,13 +97,29 @@ async function loadEbooks() {
           ${b.uploaderName?`<button class="tag-btn" onclick="filterEbookByUploader('${b.uploaderPhone}','${escHtml(b.uploaderName)}')">👤 ${b.uploaderName}</button>`:''}
           <span>🕐 ${timeAgo(b.createdAt)}</span>
         </div>
-        ${b.description?`<div class="text-sm text-muted">${b.description}</div>`:''}
         <div class="book-card-actions">
           <a href="${b.link}" target="_blank" rel="noopener" class="btn-primary btn-sm" style="text-decoration:none;display:inline-block;">📥 পড়ুন</a>
           <button class="btn-secondary btn-sm" onclick="showPrintOrder('${b.id}','${escHtml(b.title)}')">🖨️ প্রিন্ট অর্ডার</button>
+          <button class="btn-secondary btn-sm" onclick='showEbookDetails(${JSON.stringify(b).replace(/'/g,"&#39;")})'>🔍 বিস্তারিত</button>
         </div>
       </div>`).join('');
   } catch(e){el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`;}
+}
+
+function showEbookDetails(b) {
+  showModal(`
+    <span class="modal-close" onclick="closeModal()">✕</span>
+    <div class="modal-title">📖 ${b.title}</div>
+    <div style="font-size:14px;line-height:2.2;">
+      ${b.author?`<div><b>✍️ লেখক:</b> ${b.author}</div>`:''}
+      ${b.translator?`<div><b>🌐 অনুবাদক:</b> ${b.translator}</div>`:''}
+      ${b.category?`<div><b>🏷️ ক্যাটাগরি:</b> ${b.category}</div>`:''}
+      <div><b>👤 আপলোডকারী:</b> ${b.uploaderName||''}</div>
+      <div><b>🕐 যোগ হয়েছে:</b> ${timeAgo(b.createdAt)}</div>
+    </div>
+    ${b.description?`<div class="card" style="margin-top:10px;"><div class="text-sm text-muted" style="margin-bottom:4px;">বিবরণ:</div>${b.description}</div>`:''}
+    <a href="${b.link}" target="_blank" rel="noopener" class="btn-primary btn-full" style="text-decoration:none;display:block;text-align:center;margin-top:14px;">📥 পড়ুন / ডাউনলোড</a>
+  `);
 }
 
 function showUploadEbook() {
@@ -108,6 +128,7 @@ function showUploadEbook() {
     <div class="modal-title">📤 ই-বুক আপলোড</div>
     <div class="input-group"><label>বইয়ের নাম *</label><input type="text" id="ebTitle" placeholder="বইয়ের নাম"></div>
     <div class="input-group"><label>লেখকের নাম</label><input type="text" id="ebAuthor" placeholder="লেখকের নাম"></div>
+    <div class="input-group"><label>অনুবাদক (ঐচ্ছিক)</label><input type="text" id="ebTranslator" placeholder="অনুবাদকের নাম"></div>
     <div class="input-group"><label>ক্যাটাগরি *</label>
       <select id="ebCategory">${CATEGORIES.filter(c=>c!=='সব ক্যাটাগরি').map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
     <div class="input-group"><label>বইয়ের লিংক *</label>
@@ -127,6 +148,7 @@ async function submitEbook() {
   try {
     await db.collection(EBOOKS_COL).add({
       title, author:document.getElementById('ebAuthor').value.trim(),
+      translator:document.getElementById('ebTranslator').value.trim(),
       category:document.getElementById('ebCategory').value,
       link, description:document.getElementById('ebDesc').value.trim(),
       uploaderPhone:currentUser.phone, uploaderName:currentUser.name,

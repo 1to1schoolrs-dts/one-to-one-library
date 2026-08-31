@@ -525,6 +525,7 @@ async function showAdminPanel(container) {
     <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;flex-wrap:wrap;">
       <button class="btn-primary btn-sm" onclick="loadAdminTab('complaints')" id="atab-complaints">⚠️ অভিযোগ</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('categories')" id="atab-categories">🏷️ ক্যাটাগরি</button>
+      <button class="btn-secondary btn-sm" onclick="loadAdminTab('demands')" id="atab-demands">📢 চাহিদা</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('orders')" id="atab-orders">🖨️ প্রিন্ট</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('shop')" id="atab-shop">🛍️ বিক্রয়</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('report')" id="atab-report">📊 রিপোর্ট</button>
@@ -538,13 +539,14 @@ async function showAdminPanel(container) {
 }
 
 function loadAdminTab(tab) {
-  ['complaints','categories','orders','shop','report','borrows','users','download'].forEach(t=>{
+  ['complaints','categories','demands','orders','shop','report','borrows','users','download'].forEach(t=>{
     const b=document.getElementById('atab-'+t);
     if(b) b.className=t===tab?'btn-primary btn-sm':'btn-secondary btn-sm';
   });
   switch(tab){
     case 'complaints': loadAdminComplaints(); break;
     case 'categories': loadAdminCategories(); break;
+    case 'demands':    loadAdminDemands(); break;
     case 'orders':     loadAdminOrders(); break;
     case 'shop':       loadAdminShopOrders(); break;
     case 'report':     loadAdminReport(); break;

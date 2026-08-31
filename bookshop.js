@@ -74,8 +74,13 @@ async function loadShopBooks(filterLibId=null){
     let books=snap.docs.map(d=>({id:d.id,...d.data()}));
     books.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
     if(shopCurrentCat!=='সব ক্যাটাগরি')books=books.filter(b=>b.category===shopCurrentCat);
-    if(search)books=books.filter(b=>b.title?.toLowerCase().includes(search)||b.author?.toLowerCase().includes(search)||b.libraryName?.toLowerCase().includes(search));
-    books.sort((a,b)=>shopLocScore(b)-shopLocScore(a));
+    if(search){
+      books = books.map(b=>({...b, _score: fuzzyScoreFields([b.title,b.author,b.libraryName], search)}))
+        .filter(b=>b._score>0);
+      books.sort((a,b)=>(b._score-a._score)||(shopLocScore(b)-shopLocScore(a)));
+    } else {
+      books.sort((a,b)=>shopLocScore(b)-shopLocScore(a));
+    }
     if(!books.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><p>কোনো বই পাওয়া যায়নি</p><button class="btn-secondary btn-sm" style="margin-top:10px;" onclick="clearShopFilter()">সব দেখুন</button></div>`;return;}
     const filterBanner = (shopFilterAuthor||shopFilterLibId)
       ? `<div style="background:#e8f4fd;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">

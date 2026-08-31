@@ -82,3 +82,50 @@ async function markDemandFulfilled(demandId, feature) {
     showDemandsList(feature);
   } catch(e) { showToast('সমস্যা হয়েছে'); }
 }
+
+// ---- অ্যাডমিন: সকল চাহিদা দেখা ও মুছে ফেলা ----
+async function loadAdminDemands() {
+  const el=document.getElementById('adminContent'); if(!el) return;
+  el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
+  try {
+    const snap = await db.collection(DEMANDS_COL).get();
+    const items = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    if (!items.length) { el.innerHTML=`<div class="empty-state"><p>কোনো চাহিদা নেই</p></div>`; return; }
+    el.innerHTML = `
+      <div class="text-sm text-muted" style="margin-bottom:8px;">মোট: ${items.length}টি</div>
+      <button class="btn-danger btn-sm" style="margin-bottom:10px;" onclick="deleteFulfilledDemands()">🗑️ পূরণ হওয়া সব একসাথে মুছুন</button>
+    ` + items.map(d=>`
+      <div class="history-item">
+        <div class="flex-between">
+          <div class="history-title">📖 ${d.title}</div>
+          <span class="badge ${d.status==='fulfilled'?'badge-green':'badge-yellow'}">${d.status==='fulfilled'?'পূরণ হয়েছে':'খোঁজা হচ্ছে'}</span>
+        </div>
+        <div class="history-date">✍️ ${d.author} · 🏷️ ${demandFeatureLabel(d.feature)}</div>
+        ${d.note?`<div class="text-sm text-muted">${d.note}</div>`:''}
+        <div class="history-date">👤 ${d.requesterName} (${d.requesterPhone}) · 📅 ${formatDate(d.createdAt)}</div>
+        <button class="btn-danger btn-sm" style="margin-top:6px;" onclick="adminDeleteDemand('${d.id}')">🗑️ মুছুন</button>
+      </div>`).join('');
+  } catch(e) { el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`; }
+}
+
+async function adminDeleteDemand(demandId) {
+  if(!confirm('এই চাহিদাটি মুছে ফেলবেন?')) return;
+  try {
+    await db.collection(DEMANDS_COL).doc(demandId).delete();
+    showToast('✅ মুছে ফেলা হয়েছে');
+    loadAdminDemands();
+  } catch(e) { showToast('সমস্যা হয়েছে'); }
+}
+
+async function deleteFulfilledDemands() {
+  if(!confirm('পূরণ হওয়া সব চাহিদা মুছে ফেলবেন?')) return;
+  try {
+    const snap = await db.collection(DEMANDS_COL).where('status','==','fulfilled').get();
+    if (snap.empty) { showToast('পূরণ হওয়া কোনো চাহিদা নেই'); return; }
+    const batch = db.batch();
+    snap.docs.forEach(d=>batch.delete(d.ref));
+    await batch.commit();
+    showToast(`✅ ${snap.size}টি মুছে ফেলা হয়েছে`);
+    loadAdminDemands();
+  } catch(e) { showToast('সমস্যা হয়েছে'); }
+}
