@@ -118,6 +118,7 @@ async function loadShopBooks(filterLibId=null){
           :`<button class="btn-primary btn-sm" onclick="showBuyBook('${b.id}')">🛒 কিনুন</button>
             ${b.bargainable?`<button class="btn-secondary btn-sm" onclick="showBargainStart('${b.id}','${escHtml(b.title)}','${b.salePrice}','${b.sellerPhone}','${escHtml(b.libraryName)}')">💬 বারগেইন</button>`:''}
             <button class="btn-secondary btn-sm" onclick="addToCart('${b.id}','${escHtml(b.title)}',${b.salePrice},'${b.libraryId}','${escHtml(b.libraryName)}','${b.sellerPhone}')">🧺 কার্ট</button>`}
+          <button class="btn-secondary btn-sm" onclick='showShopBookDetails(${JSON.stringify(b).replace(/'/g,"&#39;")})'>🔍 বিস্তারিত</button>
         </div>
       </div>`;
     }).join('');
@@ -160,18 +161,20 @@ async function showAddLibrary(){
     <div class="input-group"><label>মালিকের নাম *</label><input type="text" id="libOwner" value="${currentUser.name}"></div>
     <div class="input-group"><label>ফোন *</label><input type="tel" id="libPhone" value="${currentUser.phone}"></div>
     <div class="input-group"><label>ঠিকানা *</label><input type="text" id="libAddress" placeholder="রাস্তা, এলাকা"></div>
-    <div class="form-row">
-      <div class="input-group"><label>উপজেলা *</label><input type="text" id="libUpazila" value="${currentUser.upazila||''}"></div>
-      <div class="input-group"><label>জেলা *</label><input type="text" id="libDistrict" value="${currentUser.district||''}"></div>
-    </div>
+    <div id="libLocationArea"></div>
     <button class="btn-primary" onclick="submitLibrary()">নিবন্ধন করুন</button>
   `);
+  const locArea = document.getElementById('libLocationArea');
+  if (locArea) {
+    locArea.innerHTML = locationDropdownsHTML('lib', { upazila: currentUser.upazila });
+    const division = currentUser.division || findDivisionForDistrict(currentUser.district) || '';
+    if (division) preselectLocation('lib', division, currentUser.district);
+  }
 }
 async function submitLibrary(){
   const name=document.getElementById('libName').value.trim();
   const address=document.getElementById('libAddress').value.trim();
-  const upazila=document.getElementById('libUpazila').value.trim();
-  const district=document.getElementById('libDistrict').value.trim();
+  const { district, upazila } = getLocationValues('lib');
   if(!name||!address||!upazila||!district)return showToast('সব তথ্য পূরণ করুন');
   try{
     const ref=await db.collection(LIBRARIES_COL).add({
@@ -192,6 +195,7 @@ function showAddShopBook(libId,libName){
     <div style="background:#f0f9f4;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px;">🏪 ${libName}</div>
     <div class="input-group"><label>বইয়ের নাম *</label><input type="text" id="sbTitle"></div>
     <div class="input-group"><label>লেখক *</label><input type="text" id="sbAuthor"></div>
+    <div class="input-group"><label>অনুবাদক (ঐচ্ছিক)</label><input type="text" id="sbTranslator"></div>
     <div class="input-group"><label>প্রকাশনী</label><input type="text" id="sbPublisher"></div>
     <div class="input-group"><label>ক্যাটাগরি *</label>
       <select id="sbCategory">${CATEGORIES.filter(c=>c!=='সব ক্যাটাগরি').map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
@@ -221,7 +225,8 @@ async function submitShopBook(libId,libName){
   const lib=libDoc.data();
   try{
     await db.collection(SHOP_COL).add({
-      title,author,publisher:document.getElementById('sbPublisher').value.trim(),
+      title,author,translator:document.getElementById('sbTranslator').value.trim(),
+      publisher:document.getElementById('sbPublisher').value.trim(),
       category:document.getElementById('sbCategory').value,description:desc,
       printPrice:Number(document.getElementById('sbPrintPrice').value)||0,salePrice,
       stock:Number(document.getElementById('sbStock').value)||1,
@@ -233,6 +238,25 @@ async function submitShopBook(libId,libName){
     });
     closeModal();showToast('✅ বই যোগ হয়েছে!');navigate('bookshop');
   }catch(e){showToast('সমস্যা: '+e.message);}
+}
+
+function showShopBookDetails(b) {
+  showModal(`
+    <span class="modal-close" onclick="closeModal()">✕</span>
+    <div class="modal-title">📗 ${b.title}</div>
+    <div style="font-size:14px;line-height:2.2;">
+      ${b.author?`<div><b>✍️ লেখক:</b> ${b.author}</div>`:''}
+      ${b.translator?`<div><b>🌐 অনুবাদক:</b> ${b.translator}</div>`:''}
+      ${b.publisher?`<div><b>🏢 প্রকাশনী:</b> ${b.publisher}</div>`:''}
+      ${b.category?`<div><b>🏷️ ক্যাটাগরি:</b> ${b.category}</div>`:''}
+      <div><b>🏪 লাইব্রেরি:</b> ${b.libraryName}</div>
+      <div><b>📍 এলাকা:</b> ${b.libraryUpazila||''}, ${b.libraryDistrict||''}</div>
+      ${b.printPrice?`<div><b>মুদ্রিত মূল্য:</b> ৳${b.printPrice}</div>`:''}
+      <div><b>বিক্রয় মূল্য:</b> ৳${b.salePrice}</div>
+      <div><b>স্টক:</b> ${b.stock||1} কপি</div>
+    </div>
+    ${b.description?`<div class="card" style="margin-top:10px;"><div class="text-sm text-muted" style="margin-bottom:4px;">বিবরণ:</div>${b.description}</div>`:''}
+  `);
 }
 
 async function showEditShopBook(bookId){

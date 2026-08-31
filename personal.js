@@ -150,6 +150,7 @@ async function loadPersonalBooks(search='') {
           ${!isMine&&b.available!==false&&genderOk?`<button class="btn-primary btn-sm" onclick="checkBorrowEligibility('${b.id}','${escHtml(b.title)}','${b.ownerPhone}','${escHtml(b.ownerName)}')">📚 ধার চাই</button>`:''}
           ${!isMine&&b.available!==false&&!genderOk&&!genderUnknown?`<span class="text-sm text-muted">🔒 এই বই ধার নেওয়া যাবে না</span>`:''}
           ${!isMine&&b.available!==false&&genderUnknown&&!currentUser.gender?`<button class="btn-secondary btn-sm" onclick="showProfile()">⚠️ আগে প্রোফাইলে লিঙ্গ সেট করুন</button>`:''}
+          <button class="btn-secondary btn-sm" onclick='showPersonalBookDetails(${JSON.stringify(b).replace(/'/g,"&#39;")})'>🔍 বিস্তারিত</button>
           ${isMine?`<button class="btn-secondary btn-sm" onclick="showMyBookDetail('${b.id}')">⚙️ পরিচালনা</button>`:''}
         </div>
       </div>`;
@@ -198,6 +199,8 @@ function showAddPersonalBook() {
     <div class="modal-title">📕 আমার বই যোগ করুন</div>
     <div class="input-group"><label>বইয়ের নাম *</label><input type="text" id="perTitle" placeholder="বইয়ের নাম"></div>
     <div class="input-group"><label>লেখক</label><input type="text" id="perAuthor" placeholder="লেখকের নাম"></div>
+    <div class="input-group"><label>অনুবাদক (ঐচ্ছিক)</label><input type="text" id="perTranslator" placeholder="অনুবাদকের নাম"></div>
+    <div class="input-group"><label>প্রকাশনী (ঐচ্ছিক)</label><input type="text" id="perPublisher" placeholder="প্রকাশনীর নাম"></div>
     <div class="input-group"><label>ক্যাটাগরি *</label>
       <select id="perCategory">${CATEGORIES.filter(c=>c!=='সব ক্যাটাগরি').map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
     <div class="input-group"><label>সংক্ষিপ্ত বিবরণ</label><textarea id="perDesc" placeholder="বই সম্পর্কে লিখুন..."></textarea></div>
@@ -212,6 +215,8 @@ async function submitPersonalBook() {
   try {
     await db.collection(PERSONAL_COL).add({
       title,author:document.getElementById('perAuthor').value.trim(),
+      translator:document.getElementById('perTranslator').value.trim(),
+      publisher:document.getElementById('perPublisher').value.trim(),
       category:document.getElementById('perCategory').value,
       description:document.getElementById('perDesc').value.trim(),
       ownerPhone:currentUser.phone,ownerName:currentUser.name,ownerGender:currentUser.gender,
@@ -220,6 +225,23 @@ async function submitPersonalBook() {
     });
     closeModal();showToast('✅ বই যোগ হয়েছে!');navigate('personal');
   } catch(e){showToast('সমস্যা: '+e.message);}
+}
+
+function showPersonalBookDetails(b) {
+  showModal(`
+    <span class="modal-close" onclick="closeModal()">✕</span>
+    <div class="modal-title">📕 ${b.title}</div>
+    <div style="font-size:14px;line-height:2.2;">
+      ${b.author?`<div><b>✍️ লেখক:</b> ${b.author}</div>`:''}
+      ${b.translator?`<div><b>🌐 অনুবাদক:</b> ${b.translator}</div>`:''}
+      ${b.publisher?`<div><b>🏢 প্রকাশনী:</b> ${b.publisher}</div>`:''}
+      ${b.category?`<div><b>🏷️ ক্যাটাগরি:</b> ${b.category}</div>`:''}
+      <div><b>👤 মালিক:</b> ${b.ownerName}</div>
+      <div><b>📍 এলাকা:</b> ${b.ownerVillage||''}, ${b.ownerUpazila||''}, ${b.ownerDistrict||''}</div>
+      <div><b>অবস্থা:</b> ${b.available!==false?'পাওয়া যাচ্ছে':'ধার দেওয়া'}</div>
+    </div>
+    ${b.description?`<div class="card" style="margin-top:10px;"><div class="text-sm text-muted" style="margin-bottom:4px;">বিবরণ:</div>${b.description}</div>`:''}
+  `);
 }
 
 async function showBorrowRequest(bookId,bookTitle,ownerPhone,ownerName) {

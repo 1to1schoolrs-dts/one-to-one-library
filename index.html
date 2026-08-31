@@ -46,8 +46,7 @@
         <div class="text-sm text-muted" style="margin-top:4px;">শুধু বই ধার দেওয়া-নেওয়ার ক্ষেত্রে ব্যবহৃত হবে</div>
       </div>
       <div class="input-group"><label>গ্রাম / এলাকা *</label><input type="text" id="regVillage" placeholder="গ্রাম বা এলাকার নাম"></div>
-      <div class="input-group"><label>উপজেলা *</label><input type="text" id="regUpazila" placeholder="উপজেলার নাম"></div>
-      <div class="input-group"><label>জেলা *</label><input type="text" id="regDistrict" placeholder="জেলার নাম"></div>
+      <div id="regLocationArea"></div>
     </div>
     <button class="btn-primary" id="authBtn" onclick="handleAuth()">প্রবেশ করুন</button>
   </div>
@@ -99,6 +98,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="firebase-config.js"></script>
+<script src="bd-locations.js"></script>
 <script src="auth.js"></script>
 <script src="notifications.js"></script>
 <script src="demands.js"></script>

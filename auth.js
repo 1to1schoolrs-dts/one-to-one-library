@@ -72,6 +72,12 @@ async function checkPhone(phone) {
       document.getElementById('registerFields').style.display = 'block';
       document.getElementById('authSubText').textContent = 'নতুন অ্যাকাউন্ট — তথ্য পূরণ করুন';
       btn.textContent = 'নিবন্ধন করুন';
+      // বিভাগ/জেলা/উপজেলা ড্রপডাউন একবারই তৈরি করা হবে
+      const locArea = document.getElementById('regLocationArea');
+      if (locArea && !locArea.dataset.loaded) {
+        locArea.innerHTML = locationDropdownsHTML('reg');
+        locArea.dataset.loaded = 'true';
+      }
     }
   } catch (e) {
     document.getElementById('authSubText').textContent = 'সংযোগ সমস্যা, আবার চেষ্টা করুন';
@@ -108,11 +114,12 @@ async function handleAuth() {
       const name = document.getElementById('regName').value.trim();
       const gender = document.getElementById('regGender').value;
       const village = document.getElementById('regVillage').value.trim();
-      const upazila = document.getElementById('regUpazila').value.trim();
-      const district = document.getElementById('regDistrict').value.trim();
+      const division = document.getElementById('regDivision')?.value || '';
+      const { district, upazila } = getLocationValues('reg');
 
       if (!name) { showToast('নাম দিন'); btn.disabled=false; btn.textContent='নিবন্ধন করুন'; return; }
       if (!gender) { showToast('আপনি কি সিলেক্ট করুন'); btn.disabled=false; btn.textContent='নিবন্ধন করুন'; return; }
+      if (!division) { showToast('বিভাগ সিলেক্ট করুন'); btn.disabled=false; btn.textContent='নিবন্ধন করুন'; return; }
       if (!village||!upazila||!district) { showToast('ঠিকানা সম্পূর্ণ করুন'); btn.disabled=false; btn.textContent='নিবন্ধন করুন'; return; }
 
       // একই নম্বরে দুটো অ্যাকাউন্ট যেন না হয় — শেষবার আবার চেক
@@ -126,7 +133,7 @@ async function handleAuth() {
         return;
       }
 
-      const newUser = { name, gender, village, upazila, district, phone, createdAt: new Date().toISOString(), role: 'user' };
+      const newUser = { name, gender, division, village, upazila, district, phone, createdAt: new Date().toISOString(), role: 'user' };
       await db.collection(USERS_COL).doc(phone).set(newUser);
       currentUser = newUser;
       localStorage.setItem('lib_phone', phone);
@@ -192,22 +199,28 @@ function showEditProfile() {
         <option value="institution" ${currentUser.gender==='institution'?'selected':''}>প্রতিষ্ঠান</option>
       </select></div>
     <div class="input-group"><label>গ্রাম / এলাকা</label><input type="text" id="editVillage" value="${currentUser.village||''}"></div>
-    <div class="input-group"><label>উপজেলা</label><input type="text" id="editUpazila" value="${currentUser.upazila||''}"></div>
-    <div class="input-group"><label>জেলা</label><input type="text" id="editDistrict" value="${currentUser.district||''}"></div>
+    <div id="editLocationArea"></div>
     <button class="btn-primary btn-full" onclick="saveProfile()">সেভ করুন</button>
   `;
   showModal(html);
+  // ড্রপডাউন বসানো ও আগের বিভাগ/জেলা/উপজেলা প্রি-সিলেক্ট করা
+  const locArea = document.getElementById('editLocationArea');
+  if (locArea) {
+    locArea.innerHTML = locationDropdownsHTML('edit', { upazila: currentUser.upazila });
+    const division = currentUser.division || findDivisionForDistrict(currentUser.district) || '';
+    if (division) preselectLocation('edit', division, currentUser.district);
+  }
 }
 
 async function saveProfile() {
   const name = document.getElementById('editName').value.trim();
   const gender = document.getElementById('editGender').value;
   const village = document.getElementById('editVillage').value.trim();
-  const upazila = document.getElementById('editUpazila').value.trim();
-  const district = document.getElementById('editDistrict').value.trim();
+  const division = document.getElementById('editDivision')?.value || currentUser.division || '';
+  const { district, upazila } = getLocationValues('edit');
   if (!name) { showToast('নাম দিন'); return; }
   try {
-    const update = { name, village, upazila, district };
+    const update = { name, village, division, upazila, district };
     if (gender) update.gender = gender;
     await db.collection(USERS_COL).doc(currentUser.phone).update(update);
     currentUser = { ...currentUser, ...update };
