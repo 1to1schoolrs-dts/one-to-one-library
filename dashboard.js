@@ -523,7 +523,8 @@ async function showAdminPanel(container) {
       <button class="btn-primary" onclick="saveSettings()">✅ সেটিংস সেভ করুন</button>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;flex-wrap:wrap;">
-      <button class="btn-primary btn-sm" onclick="loadAdminTab('complaints')" id="atab-complaints">⚠️ অভিযোগ</button>
+      <button class="btn-primary btn-sm" onclick="loadAdminTab('pinrecovery')" id="atab-pinrecovery">🔑 পিন রিকভারি</button>
+      <button class="btn-secondary btn-sm" onclick="loadAdminTab('complaints')" id="atab-complaints">⚠️ অভিযোগ</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('categories')" id="atab-categories">🏷️ ক্যাটাগরি</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('demands')" id="atab-demands">📢 চাহিদা</button>
       <button class="btn-secondary btn-sm" onclick="loadAdminTab('orders')" id="atab-orders">🖨️ প্রিন্ট</button>
@@ -535,15 +536,16 @@ async function showAdminPanel(container) {
     </div>
     <div id="adminContent"></div>
   </div>`;
-  loadAdminTab('complaints');
+  loadAdminTab('pinrecovery');
 }
 
 function loadAdminTab(tab) {
-  ['complaints','categories','demands','orders','shop','report','borrows','users','download'].forEach(t=>{
+  ['pinrecovery','complaints','categories','demands','orders','shop','report','borrows','users','download'].forEach(t=>{
     const b=document.getElementById('atab-'+t);
     if(b) b.className=t===tab?'btn-primary btn-sm':'btn-secondary btn-sm';
   });
   switch(tab){
+    case 'pinrecovery': loadAdminPinRecovery(); break;
     case 'complaints': loadAdminComplaints(); break;
     case 'categories': loadAdminCategories(); break;
     case 'demands':    loadAdminDemands(); break;
@@ -614,6 +616,68 @@ async function deleteAdminCategory(name) {
     showToast('✅ মুছে ফেলা হয়েছে');
     loadAdminCategories();
   } catch(e){showToast('সমস্যা: '+e.message);}
+}
+
+// ---- অ্যাডমিন: পিন রিকভারি রিকোয়েস্ট ----
+async function loadAdminPinRecovery() {
+  const el=document.getElementById('adminContent'); if(!el) return;
+  el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
+  try {
+    const snap = await db.collection('pin_recovery_requests').get();
+    const items = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    if (!items.length) { el.innerHTML=`<div class="empty-state"><div class="empty-icon">🔑</div><p>কোনো রিকভারি রিকোয়েস্ট নেই</p></div>`; return; }
+    el.innerHTML = items.map(r=>`
+      <div class="history-item">
+        <div class="flex-between">
+          <div class="history-title">🔑 ${r.name}</div>
+          <span class="badge ${r.status==='resolved'?'badge-green':'badge-yellow'}">${r.status==='resolved'?'রিসেট হয়েছে':'অপেক্ষামান'}</span>
+        </div>
+        <div class="history-date">📞 ${r.phone} · 📧 ${r.email}</div>
+        <div class="history-date">📅 ${formatDate(r.createdAt)}</div>
+        ${r.status!=='resolved'?`
+          <div style="background:#fff3cd;border-radius:6px;padding:8px;margin-top:8px;font-size:12px;color:#856404;">
+            ⚠️ প্রথমে যাচাই করুন — ইমেইলটা কি ইউজারের প্রোফাইলের ইমেইলের সাথে মেলে? নিচে ইউজারের সেভ করা ইমেইল দেখুন।
+          </div>
+          <button class="btn-secondary btn-sm" style="margin-top:6px;" onclick="verifyPinRecoveryUser('${r.phone}','${r.id}')">🔍 ইউজারের তথ্য যাচাই করুন</button>
+        `:''}
+      </div>`).join('');
+  } catch(e) { el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`; }
+}
+
+async function verifyPinRecoveryUser(phone, requestId) {
+  try {
+    const doc = await db.collection(USERS_COL).doc(phone).get();
+    if (!doc.exists) { showToast('ইউজার পাওয়া যায়নি'); return; }
+    const user = doc.data();
+    showModal(`
+      <span class="modal-close" onclick="closeModal()">✕</span>
+      <div class="modal-title">🔍 ইউজার যাচাই</div>
+      <div class="card" style="margin-bottom:14px;">
+        <div style="font-size:14px;line-height:2;">
+          <div><b>নাম:</b> ${user.name}</div>
+          <div><b>ফোন:</b> ${user.phone}</div>
+          <div><b>সেভ করা ইমেইল:</b> ${user.email||'নেই'}</div>
+          <div><b>এলাকা:</b> ${user.village||''}, ${user.upazila||''}, ${user.district||''}</div>
+        </div>
+      </div>
+      <div style="background:#e8f4fd;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;color:#0c5460;">
+        ℹ️ রিকোয়েস্টের ইমেইলের সাথে উপরের ইমেইল মিললে তবেই পিন রিসেট করুন।
+      </div>
+      <button class="btn-danger btn-full" onclick="resetUserPin('${phone}','${requestId}')">🔓 পিন রিসেট করুন</button>
+    `);
+  } catch(e) { showToast('সমস্যা হয়েছে'); }
+}
+
+async function resetUserPin(phone, requestId) {
+  if (!confirm('নিশ্চিত? এই ইউজারের পিন মুছে যাবে, পরের লগইনে নতুন পিন সেট করতে হবে।')) return;
+  try {
+    // pinHash মুছে ফেলা হচ্ছে — পরের বার লগইন করলে auth.js এর showFirstTimePinSetup() স্বয়ংক্রিয়ভাবে চালু হবে
+    await db.collection(USERS_COL).doc(phone).update({ pinHash: firebase.firestore.FieldValue.delete() });
+    if (requestId) await db.collection('pin_recovery_requests').doc(requestId).update({ status: 'resolved' });
+    closeModal();
+    showToast('✅ পিন রিসেট হয়েছে! ইউজার এখন নতুন পিন সেট করতে পারবেন।');
+    loadAdminPinRecovery();
+  } catch(e) { showToast('সমস্যা: '+e.message); }
 }
 
 async function saveSettings() {

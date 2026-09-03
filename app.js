@@ -97,6 +97,16 @@ function copyToClipboard(text) {
 }
 
 // ============================================
+// পিন hash করা — plain text সেভ হয় না, নিরাপত্তার জন্য
+// ============================================
+async function hashPin(pin) {
+  const enc = new TextEncoder().encode(pin + 'lib-salt-2026'); // সাধারণ salt, রেইনবো টেবিল আক্রমণ ঠেকাতে
+  const hashBuffer = await crypto.subtle.digest('SHA-256', enc);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ============================================
 // ফাজি সার্চ — এক্সাক্ট ম্যাচ আগে, কাছাকাছি/ভুল বানানও পাওয়া যাবে
 // ============================================
 function normalizeSearchText(s) {

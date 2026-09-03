@@ -34,6 +34,15 @@
       <label>মোবাইল নম্বর</label>
       <input type="tel" id="authPhone" placeholder="01XXXXXXXXX" oninput="onPhoneInput(this.value)">
     </div>
+    <!-- পুরনো ইউজারের জন্য পিন ফিল্ড -->
+    <div id="loginPinArea" style="display:none;">
+      <div class="input-group"><label>৪ সংখ্যার পিন *</label>
+        <input type="password" id="loginPin" placeholder="****" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+      </div>
+      <div class="text-sm" style="text-align:right;margin:-8px 0 10px;">
+        <span style="color:var(--primary);cursor:pointer;text-decoration:underline;" onclick="showForgotPin()">পিন ভুলে গেছেন?</span>
+      </div>
+    </div>
     <div id="registerFields" style="display:none;">
       <div class="input-group"><label>আপনার নাম *</label><input type="text" id="regName" placeholder="পূর্ণ নাম লিখুন"></div>
       <div class="input-group"><label>আপনি কি? *</label>
@@ -45,6 +54,14 @@
         </select>
         <div class="text-sm text-muted" style="margin-top:4px;">শুধু বই ধার দেওয়া-নেওয়ার ক্ষেত্রে ব্যবহৃত হবে</div>
       </div>
+      <div class="input-group"><label>ইমেইল *</label>
+        <input type="email" id="regEmail" placeholder="you@example.com">
+        <div class="text-sm" style="margin-top:4px;color:var(--danger);">⚠️ সঠিক ইমেইল দিন — পিন ভুলে গেলে এই ইমেইল দিয়েই পরিচয় যাচাই করে পিন রিসেট করা হবে। ভুল ইমেইল দিলে পিন হারালে অ্যাকাউন্ট ফিরে পাবেন না।</div>
+      </div>
+      <div class="input-group"><label>৪ সংখ্যার পিন সেট করুন *</label>
+        <input type="password" id="regPin" placeholder="****" maxlength="4" inputmode="numeric" pattern="[0-9]*"></div>
+      <div class="input-group"><label>পিন আবার লিখুন *</label>
+        <input type="password" id="regPinConfirm" placeholder="****" maxlength="4" inputmode="numeric" pattern="[0-9]*"></div>
       <div class="input-group"><label>গ্রাম / এলাকা *</label><input type="text" id="regVillage" placeholder="গ্রাম বা এলাকার নাম"></div>
       <div id="regLocationArea"></div>
     </div>
