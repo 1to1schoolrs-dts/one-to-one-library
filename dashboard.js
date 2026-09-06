@@ -619,6 +619,8 @@ async function deleteAdminCategory(name) {
 }
 
 // ---- অ্যাডমিন: পিন রিকভারি রিকোয়েস্ট ----
+// নোট: পিন রিসেট হয়ে গেলে রিকোয়েস্ট ডাটাবেস থেকে মুছে যায়,
+// তাই এখানে সবসময় শুধু "অপেক্ষামান" রিকোয়েস্টগুলোই দেখাবে
 async function loadAdminPinRecovery() {
   const el=document.getElementById('adminContent'); if(!el) return;
   el.innerHTML='<div class="text-muted text-sm">লোড হচ্ছে...</div>';
@@ -630,16 +632,14 @@ async function loadAdminPinRecovery() {
       <div class="history-item">
         <div class="flex-between">
           <div class="history-title">🔑 ${r.name}</div>
-          <span class="badge ${r.status==='resolved'?'badge-green':'badge-yellow'}">${r.status==='resolved'?'রিসেট হয়েছে':'অপেক্ষামান'}</span>
+          <span class="badge badge-yellow">অপেক্ষামান</span>
         </div>
         <div class="history-date">📞 ${r.phone} · 📧 ${r.email}</div>
         <div class="history-date">📅 ${formatDate(r.createdAt)}</div>
-        ${r.status!=='resolved'?`
-          <div style="background:#fff3cd;border-radius:6px;padding:8px;margin-top:8px;font-size:12px;color:#856404;">
-            ⚠️ প্রথমে যাচাই করুন — ইমেইলটা কি ইউজারের প্রোফাইলের ইমেইলের সাথে মেলে? নিচে ইউজারের সেভ করা ইমেইল দেখুন।
-          </div>
-          <button class="btn-secondary btn-sm" style="margin-top:6px;" onclick="verifyPinRecoveryUser('${r.phone}','${r.id}')">🔍 ইউজারের তথ্য যাচাই করুন</button>
-        `:''}
+        <div style="background:#fff3cd;border-radius:6px;padding:8px;margin-top:8px;font-size:12px;color:#856404;">
+          ⚠️ প্রথমে যাচাই করুন — ইমেইলটা কি ইউজারের প্রোফাইলের ইমেইলের সাথে মেলে? নিচে ইউজারের সেভ করা ইমেইল দেখুন।
+        </div>
+        <button class="btn-secondary btn-sm" style="margin-top:6px;" onclick="verifyPinRecoveryUser('${r.phone}','${r.id}')">🔍 ইউজারের তথ্য যাচাই করুন</button>
       </div>`).join('');
   } catch(e) { el.innerHTML=`<div class="empty-state"><p>লোড সমস্যা</p></div>`; }
 }
@@ -673,7 +673,8 @@ async function resetUserPin(phone, requestId) {
   try {
     // pinHash মুছে ফেলা হচ্ছে — পরের বার লগইন করলে auth.js এর showFirstTimePinSetup() স্বয়ংক্রিয়ভাবে চালু হবে
     await db.collection(USERS_COL).doc(phone).update({ pinHash: firebase.firestore.FieldValue.delete() });
-    if (requestId) await db.collection('pin_recovery_requests').doc(requestId).update({ status: 'resolved' });
+    // রিসেট হয়ে গেলে রিকোয়েস্টটা ডাটাবেস থেকে মুছে ফেলা হচ্ছে — "রিসেট হয়েছে" ট্যাগসহ জমা রাখার দরকার নেই
+    if (requestId) await db.collection('pin_recovery_requests').doc(requestId).delete();
     closeModal();
     showToast('✅ পিন রিসেট হয়েছে! ইউজার এখন নতুন পিন সেট করতে পারবেন।');
     loadAdminPinRecovery();

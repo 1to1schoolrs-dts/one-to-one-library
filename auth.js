@@ -212,9 +212,23 @@ async function submitFirstTimePin() {
 }
 
 // ---- পিন ভুলে গেলে — অ্যাডমিনকে রিকভারি রিকোয়েস্ট পাঠানো ----
-function showForgotPin() {
+async function showForgotPin() {
   const phone = document.getElementById('authPhone').value.trim();
   if (!phone) { showToast('আগে ফোন নম্বর দিন'); return; }
+  // আগে থেকেই অপেক্ষামান রিকোয়েস্ট থাকলে সরাসরি জানিয়ে দেওয়া হচ্ছে
+  try {
+    const existingSnap = await db.collection('pin_recovery_requests').where('phone','==',phone).get();
+    if (!existingSnap.empty) {
+      showModal(`
+        <span class="modal-close" onclick="closeModal()">✕</span>
+        <div class="modal-title">⏳ রিকোয়েস্ট বিদ্যমান</div>
+        <div style="background:#fff3cd;border-radius:8px;padding:12px;font-size:14px;color:#856404;">
+          আপনি ইতিমধ্যেই রিকুয়েস্ট করেছেন। অনুগ্রহপূর্বক অপেক্ষা করুন। অ্যাডমিন যাচাই করে পিন রিসেট করে দেবেন।
+        </div>
+      `);
+      return;
+    }
+  } catch(e) {}
   showModal(`
     <span class="modal-close" onclick="closeModal()">✕</span>
     <div class="modal-title">🔑 পিন ভুলে গেছেন?</div>
@@ -235,6 +249,12 @@ async function submitPinRecoveryRequest(phone) {
     if (!user) { showToast('এই নম্বরে কোনো অ্যাকাউন্ট নেই'); return; }
     if (!user.email || user.email.toLowerCase() !== email.toLowerCase()) {
       showToast('❌ ইমেইল মিলছে না — রেজিস্ট্রেশনের সময় যে ইমেইল দিয়েছিলেন সেটা দিন');
+      return;
+    }
+    // একই নম্বরে আগে থেকে অপেক্ষামান রিকোয়েস্ট থাকলে দ্বিতীয়বার পাঠানো যাবে না
+    const existingSnap = await db.collection('pin_recovery_requests').where('phone','==',phone).get();
+    if (!existingSnap.empty) {
+      showToast('⏳ আপনি ইতিমধ্যেই রিকুয়েস্ট করেছেন। অনুগ্রহপূর্বক অপেক্ষা করুন।');
       return;
     }
     const settings = await getSettings();

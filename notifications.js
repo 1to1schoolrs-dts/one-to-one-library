@@ -110,7 +110,7 @@ function notifIcon(type) {
     'borrow_returned':'📦','return_request':'🔄',
     'purchase_order':'🛒','purchase_confirmed':'✅','purchase_cancelled':'❌',
     'bargain_offer':'💬','bargain_counter':'💬','bargain_accepted':'✅','bargain_rejected':'❌',
-    'complaint_reply':'📩','complaint_new':'⚠️'
+    'complaint_reply':'📩','complaint_new':'⚠️','pin_recovery':'🔑'
   };
   return m[type]||'🔔';
 }
@@ -179,6 +179,12 @@ async function handleNotifAction(type, relatedId) {
     case 'complaint_new':
       navigate('dashboard');
       setTimeout(()=>loadDashTab('complaints'), 700);
+      break;
+
+    case 'pin_recovery':
+      // অ্যাডমিন প্যানেলে পিন রিকভারি ট্যাবে সরাসরি যাবে
+      navigate('admin');
+      setTimeout(()=>{ if (typeof loadAdminTab === 'function') loadAdminTab('pinrecovery'); }, 700);
       break;
   }
 }
